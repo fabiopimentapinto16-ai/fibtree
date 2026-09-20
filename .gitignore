@@ -1,0 +1,50 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# Kotlin
+*.kotlin_module
+
+# Java
+*.class
+*.jar
+*.war
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Linux
+*~
+.directory
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
+
+# Secrets
+*.keystore
+*.jks
+secrets.properties
