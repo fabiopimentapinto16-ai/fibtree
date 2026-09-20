@@ -1,6 +1,7 @@
-**Hierarchical Merkle tree with Fibonacci branching for Delay-Tolerant Networks.**
+**Merkle tree with Fibonacci branching for Delay-Tolerant Networks.**
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22858947.svg)](https://doi.org/10.5281/zenodo.22858947)
+[![DOI v2.0](https://zenodo.org/badge/DOI/10.5281/zenodo.22861639.svg)](https://doi.org/10.5281/zenodo.22861639)
+[![DOI v1.0](https://zenodo.org/badge/DOI/10.5281/zenodo.22858947.svg)](https://doi.org/10.5281/zenodo.22858947)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## What is FibTree?
@@ -14,13 +15,23 @@ FibTree is a data structure for distributing large datasets over networks with i
 - Hierarchical resilience: subtrees survive parent loss
 - Works over Wi-Fi Direct, BLE, LoRa, 4G — anything
 
-## Paper
+## Papers
 
-Read the full paper (DOI: [10.5281/zenodo.22858947](https://doi.org/10.5281/zenodo.22858947))
+- **v2.0 (English, with experimental validation):** [10.5281/zenodo.22861639](https://doi.org/10.5281/zenodo.22861639)
+- **v1.0 (Portuguese, original theoretical analysis):** [10.5281/zenodo.22858947](https://doi.org/10.5281/zenodo.22858947)
 
-## Why Fibonacci?
+## Experimental results (v2.0)
 
-Fibonacci grows faster than linear (allowing larger groupings at top levels) but slower than powers of 2 (avoiding metadata explosion). This makes it ideal for data with natural hierarchical structure.
+6,000 simulations across 6 channel loss scenarios:
+
+| Metric | FibTree | Flat RS(10,15) |
+|---|---|---|
+| Delivery at p=0.5 | **98.9%** | 14.5% |
+| Delivery at p=0.7 | **83.8%** | 0.5% |
+| Latency (p=0.5) | **157 ms** | 1000 ms |
+| Overhead (optimized) | **-33.8% to 128%** | 50% |
+
+**Average gain: +52.85 percentage points.**
 
 ## Use cases
 
@@ -32,26 +43,17 @@ Fibonacci grows faster than linear (allowing larger groupings at top levels) but
 | Space communication | Minutes of latency | Partial delivery per window |
 | Offline mesh | Short encounters | Reconstruct from fragments |
 | Repository sync | Full clone | Only diverging branches |
-
-## Theoretical results
-
-| Metric | Fibonacci (L=5) | RS flat (10,15) |
-|---|---|---|
-| Overhead | 776% | 50% |
-| P(delivery) at p=0.5 | 99.00% | 15.09% |
-| P(delivery) at p=0.7 | 99.99% | 72.14% |
-| Sync bandwidth saving | 80–95% | — |
-
-Full analysis in the paper.
+| Industrial IoT | LoRaWAN 0.3-50 kbps | Hierarchical updates |
 
 ## Status
 
 - [x] Formal specification
 - [x] Reference implementation in Kotlin
+- [x] Reference implementation in Python
 - [x] Theoretical analysis
-- [x] Paper published on Zenodo
-- [ ] Empirical validation
-- [ ] Production hardening
+- [x] Experimental validation (6,000 simulations)
+- [x] Overhead optimization techniques
+- [ ] Field deployment with real devices
 
 ## Contributing
 
@@ -63,4 +65,4 @@ MIT — free for commercial and non-commercial use.
 
 ## Author
 
-Fabio Pimenta Pinto — Pesquisador Independente
+Fabio Pimenta Pinto — Independent Researcher
