@@ -113,39 +113,7 @@ function gerarPDF(dados) {
     .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_olho_deus.pdf'; a.click(); URL.revokeObjectURL(url); })
     .catch(e => alert('Erro ao gerar PDF: ' + e.message));
 }
-
-function gerarMemorial() {
-    const lat = parseFloat(document.getElementById('lat').value);
-    const lng = parseFloat(document.getElementById('lng').value);
-    if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas válidas primeiro'); return; }
-    
-    // Pega o resultado da última análise se existir
-    fetch('/api/analisar', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true})
-    })
-    .then(r => r.json())
-    .then(dados => {
-        // Envia para gerar o memorial
-        return fetch('/api/gerar-memorial', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(dados)
-        });
-    })
-    .then(r => r.blob())
-    .then(blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'memorial_descritivo.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-    })
-    .catch(e => alert('Erro ao gerar memorial: ' + e.message));
-}
-\nwindow.onload = initMap;
+window.onload = initMap;
 </script>
 </body>
 </html>
