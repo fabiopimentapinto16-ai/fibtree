@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛰️ OLHO DE DEUS</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --cyan: #00f0ff; --blue: #0066ff; --dark: #05080f; --darker: #020408; --glass: rgba(10, 20, 35, 0.85); --border: rgba(0, 240, 255, 0.3); --green: #00ff88; --yellow: #ffcc00; --red: #ff3355; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Rajdhani', sans-serif; background: var(--darker); color: #fff; overflow: hidden; }
+#map { width: 100%; height: 100vh; z-index: 1; }
+.hud { position: fixed; top: 20px; left: 20px; z-index: 1000; background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 1px; box-shadow: 0 0 20px rgba(0, 240, 255, 0.1); }
+.hud .dot { display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.panel { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; background: var(--glass); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 1000; overflow-y: auto; padding: 25px; box-shadow: -10px 0 40px rgba(0,0,0,0.7); }
+.panel-header { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 20px; }
+.panel-header .logo { font-family: 'Orbitron'; font-size: 22px; font-weight: 900; color: var(--cyan); text-shadow: 0 0 20px var(--cyan); letter-spacing: 3px; }
+.panel-header .subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
+.btn { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: rgba(0, 240, 255, 0.05); color: var(--cyan); font-family: 'Orbitron'; font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer; border-radius: 6px; transition: all 0.3s; }
+.btn:hover { background: rgba(0, 240, 255, 0.15); box-shadow: 0 0 20px rgba(0,240,255,0.4); }
+.btn.primary { background: rgba(0, 240, 255, 0.15); border-color: var(--cyan); }
+input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-family: 'Rajdhani'; font-size: 14px; outline: none; }
+input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3); }
+.result { margin-top: 20px; display: none; }
+.score-display { text-align: center; padding: 20px; margin-bottom: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid var(--border); }
+.score-display .value { font-family: 'Orbitron'; font-size: 48px; font-weight: 900; color: var(--cyan); text-shadow: 0 0 30px var(--cyan); }
+.score-display .classif { font-size: 14px; letter-spacing: 2px; margin-top: 5px; }
+.score-display .type { font-size: 16px; margin-top: 8px; font-weight: 700; }
+.evidence-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--yellow); }
+.evidence-box.etr { border-left-color: var(--cyan); }
+.evidence-box h4 { font-family: 'Orbitron'; font-size: 11px; color: var(--yellow); margin-bottom: 8px; letter-spacing: 1px; }
+.evidence-box.etr h4 { color: var(--cyan); }
+.evidence-box ul { list-style: none; }
+.evidence-box li { font-size: 12px; padding: 3px 0; color: rgba(255,255,255,0.8); }
+.evidence-box li::before { content: '▸ '; color: var(--cyan); }
+.loading { display: none; text-align: center; padding: 20px; }
+.spinner { width: 40px; height: 40px; border: 3px solid rgba(0,240,255,0.1); border-top-color: var(--cyan); border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 768px) { .panel { width: 100%; height: 60vh; top: 40vh; border-left: none; border-top: 1px solid var(--border); } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="hud"><span class="dot"></span>SISTEMA ATIVO<div style="margin-top: 8px; color: var(--cyan);" id="hud-coord">LAT: -- | LNG: --</div></div>
+<div class="panel">
+    <div class="panel-header">
+        <div class="logo">🛰️ OLHO DE DEUS</div>
+        <div class="subtitle">Prospecção Mineral • Ouro + Terras Raras</div>
+    </div>
+    <button class="btn" onclick="ativarGPS()">📍 ATIVAR GPS EM TEMPO REAL</button>
+    <input type="number" id="lat" placeholder="Latitude" step="0.000001">
+    <input type="number" id="lng" placeholder="Longitude" step="0.000001">
+    <button class="btn primary" onclick="analisar()">🔍 ANALISAR POTENCIAL</button>
+    <button class="btn" onclick="carregarSatelite()">🛰️ VER IMAGEM DE SATÉLITE</button>
+    <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px; letter-spacing: 2px;">ANALISANDO...</div></div>
+    <div class="result" id="result"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map, marker, circle, gpsWatchId = null, satLayer = null;
+function initMap() { map = L.map('map').setView([-15, -50], 4); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CartoDB', maxZoom: 19 }).addTo(map); }
+function ativarGPS() {
+    if (!navigator.geolocation) { alert('GPS não suportado'); return; }
+    if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+    gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
+        const lat = pos.coords.latitude.toFixed(6); const lng = pos.coords.longitude.toFixed(6);
+        document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
+        document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
+        analisar();
+    }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
+}
+function analisar() {
+    const lat = parseFloat(document.getElementById('lat').value); const lng = parseFloat(document.getElementById('lng').value);
+    if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas válidas'); return; }
+    document.getElementById('loading').style.display = 'block'; document.getElementById('result').style.display = 'none';
+    fetch('/api/analisar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true}) })
+    .then(r => r.json()).then(dados => { document.getElementById('loading').style.display = 'none'; renderizarResultado(dados, lat, lng); })
+    .catch(e => { document.getElementById('loading').style.display = 'none'; alert('Erro na análise: ' + e.message); });
+}
+function renderizarResultado(dados, lat, lng) {
+    const r = document.getElementById('result');
+    let corClassif = dados.score_final >= 70 ? 'var(--green)' : dados.score_final >= 45 ? 'var(--yellow)' : 'var(--red)';
+    let iconeTipo = dados.tipo_principal === 'ouro' ? '🥇 OURO' : '💎 TERRAS RARAS';
+    let html = '<div class="score-display">';
+    html += '<div class="value" style="color:' + corClassif + '; text-shadow: 0 0 30px ' + corClassif + ';">' + dados.score_final + '</div>';
+    html += '<div class="classif" style="color:' + corClassif + ';">' + dados.classificacao + '</div>';
+    html += '<div class="type">' + iconeTipo + '</div>';
+    html += '<div style="font-size: 11px; opacity: 0.6; margin-top: 8px;">Score Ouro: ' + dados.score_ouro + ' | Score ETR: ' + dados.score_etr + '</div></div>';
+    if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>🥇 EVIDÊNCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
+    if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>💎 EVIDÊNCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
+    html += '<button class="btn primary" onclick=\'gerarPDF(' + JSON.stringify(dados).replace(/'/g, "\\'") + ')\'>📄 GERAR RELATÓRIO PDF</button>';
+    r.innerHTML = html; r.style.display = 'block';
+    if (marker) map.removeLayer(marker); if (circle) map.removeLayer(circle);
+    marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
+    map.setView([lat, lng], 11);
+    if (dados.pontos_proximos) {
+        dados.pontos_proximos.forEach(p => {
+            let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
+            let icone = L.divIcon({ html: '<div style="background:' + corPonto + '; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px ' + corPonto + ';"></div>', className: '', iconSize: [14, 14] });
+            L.marker([p.lat, p.lng], {icon: icone}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>Tipo: ' + p.tipo.toUpperCase() + '<br>Distância: ' + p.distancia_km + ' km');
+        });
+    }
+}
+function carregarSatelite() {
+    if (satLayer) { map.removeLayer(satelLayer); satLayer = null; return; }
+    const dataOntem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    satLayer = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/' + dataOntem + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, attribution: 'NASA GIBS / MODIS' }).addTo(map);
+}
+function gerarPDF(dados) {
+    fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) })
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_olho_deus.pdf'; a.click(); URL.revokeObjectURL(url); })
+    .catch(e => alert('Erro ao gerar PDF: ' + e.message));
+}
+window.onload = initMap;
+</script>
+</body>
+</html>
