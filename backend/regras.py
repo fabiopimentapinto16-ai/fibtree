@@ -78,3 +78,37 @@ def calcular_score(lat, lng, dados_satelite=None):
     score_final = max(score_ouro, score_etr)
     tipo_principal = "ouro" if score_ouro >= score_etr else "ETR"
     return {"score_final": score_final, "classificacao": classificar(score_final), "tipo_principal": tipo_principal, "score_ouro": score_ouro, "score_etr": score_etr, "evidencias_ouro": evidencias_ouro, "evidencias_etr": evidencias_etr, "pontos_proximos": sorted(pontos_proximos, key=lambda x: x["distancia_km"]), "coordenada": {"lat": lat, "lng": lng}, "raio_analisado_km": 15}
+
+def calcular_simulacao_subsolo(resultado_analise, lat, lng):
+    facilidade = "media"
+    tipo_principal = resultado_analise.get("tipo_principal", "ouro")
+    score = resultado_analise.get("score_final", 0)
+    pontos = resultado_analise.get("pontos_proximos", [])
+    if pontos:
+        facilidade = pontos[0].get("facilidade", "media")
+    camadas = []
+    if facilidade == "facil":
+        camadas = [
+            {"profundidade_cm": 0, "espessura_cm": 30, "tipo": "Solo orgânico / areia fina", "cor": "#8B7355", "descricao": "Camada superficial com matéria orgânica."},
+            {"profundidade_cm": 30, "espessura_cm": 40, "tipo": "Areia grossa / cascalho", "cor": "#A0522D", "descricao": "Cascalho de fundo (stone line). Ouro tende a se concentrar."},
+            {"profundidade_cm": 70, "espessura_cm": 50, "tipo": "Cascalho com argila", "cor": "#D2691E", "descricao": "Mistura de cascalho e argila."},
+            {"profundidade_cm": 120, "espessura_cm": 80, "tipo": "Saprolito / rocha alterada", "cor": "#696969", "descricao": "Rocha mãe já intemperizada."},
+        ]
+    elif facilidade == "dificil":
+        camadas = [
+            {"profundidade_cm": 0, "espessura_cm": 20, "tipo": "Solo residual", "cor": "#8B7355", "descricao": "Camada fina de solo sobre rocha."},
+            {"profundidade_cm": 20, "espessura_cm": 30, "tipo": "Saprolito", "cor": "#A0522D", "descricao": "Rocha parcialmente alterada."},
+            {"profundidade_cm": 50, "espessura_cm": 150, "tipo": "Rocha maciça", "cor": "#696969", "descricao": "Rocha sã. Ouro em veios de quartzo."},
+        ]
+    else:
+        camadas = [
+            {"profundidade_cm": 0, "espessura_cm": 25, "tipo": "Solo / areia", "cor": "#8B7355", "descricao": "Camada superficial mista."},
+            {"profundidade_cm": 25, "espessura_cm": 55, "tipo": "Argila / cascalho", "cor": "#A0522D", "descricao": "Mistura de argila e cascalho."},
+            {"profundidade_cm": 80, "espessura_cm": 70, "tipo": "Saprolito argiloso", "cor": "#D2691E", "descricao": "Zona de alteração com argilas. Típica de Terras Raras."},
+            {"profundidade_cm": 150, "espessura_cm": 50, "tipo": "Rocha alterada", "cor": "#696969", "descricao": "Rocha mãe intemperizada."},
+        ]
+    if tipo_principal == "ETR":
+        for c in camadas:
+            if "argila" in c["tipo"].lower() or "saprolito" in c["tipo"].lower():
+                c["descricao"] += " Zona de adsorção iônica de Terras Raras."
+    return {"coordenada": {"lat": lat, "lng": lng}, "tipo_terreno": facilidade, "tipo_principal": tipo_principal, "score": score, "camadas": camadas, "profundidade_total_cm": 200, "aviso": "SIMULAÇÃO EDUCATIVA. Baseada em perfis geológicos típicos. NÃO substitui GPR ou sondagem."}

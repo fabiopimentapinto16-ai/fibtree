@@ -21,6 +21,8 @@ body { font-family: 'Rajdhani', sans-serif; background: var(--darker); color: #f
 .btn { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: rgba(0, 240, 255, 0.05); color: var(--cyan); font-family: 'Orbitron'; font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer; border-radius: 6px; transition: all 0.3s; }
 .btn:hover { background: rgba(0, 240, 255, 0.15); box-shadow: 0 0 20px rgba(0,240,255,0.4); }
 .btn.primary { background: rgba(0, 240, 255, 0.15); border-color: var(--cyan); }
+.btn.green { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
+.btn.yellow { background: rgba(255,204,0,0.1); border-color: var(--yellow); color: var(--yellow); }
 input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-family: 'Rajdhani'; font-size: 14px; outline: none; }
 input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3); }
 .result { margin-top: 20px; display: none; }
@@ -57,10 +59,30 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3
     <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px; letter-spacing: 2px;">ANALISANDO...</div></div>
     <div class="result" id="result"></div>
 </div>
+
+<div id="modal3d" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,4,8,0.95); z-index:9999; justify-content:center; align-items:center;">
+    <div style="width:90%; max-width:900px; height:85%; background:#0a1420; border:1px solid #00f0ff; border-radius:12px; padding:20px; position:relative; display:flex; flex-direction:column;">
+        <button onclick="fecharSimulacao3D()" style="position:absolute; top:15px; right:15px; background:transparent; border:1px solid #00f0ff; color:#00f0ff; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:18px;">X</button>
+        <h2 style="font-family:'Orbitron'; color:#00f0ff; font-size:16px; margin-bottom:10px;">SIMULACAO 3D DO SUBSOLO (0 a 2 metros)</h2>
+        <p id="aviso3d" style="font-size:11px; color:#ffcc00; margin-bottom:10px;"></p>
+        <div id="canvas3d" style="flex:1; background:#020408; border-radius:8px; overflow:hidden;"></div>
+        <div id="legenda3d" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; font-size:11px;"></div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 let map, marker, circle, gpsWatchId = null, satLayer = null;
-function initMap() { map = L.map('map').setView([-15, -50], 4); L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CartoDB', maxZoom: 19 }).addTo(map); }
+let cena3d, camera3d, renderizador3d, animacaoId;
+
+function initMap() {
+    map = L.map('map').setView([-15, -50], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
+}
+
 function ativarGPS() {
     if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
     if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
@@ -71,6 +93,7 @@ function ativarGPS() {
         analisar();
     }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
 }
+
 function analisar() {
     const lat = parseFloat(document.getElementById('lat').value); const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas validas'); return; }
@@ -79,6 +102,7 @@ function analisar() {
     .then(r => r.json()).then(dados => { document.getElementById('loading').style.display = 'none'; renderizarResultado(dados, lat, lng); })
     .catch(e => { document.getElementById('loading').style.display = 'none'; alert('Erro na analise: ' + e.message); });
 }
+
 function renderizarResultado(dados, lat, lng) {
     const r = document.getElementById('result');
     let corClassif = dados.score_final >= 70 ? 'var(--green)' : dados.score_final >= 45 ? 'var(--yellow)' : 'var(--red)';
@@ -90,11 +114,16 @@ function renderizarResultado(dados, lat, lng) {
     html += '<div style="font-size: 11px; opacity: 0.6; margin-top: 8px;">Score Ouro: ' + dados.score_ouro + ' | Score ETR: ' + dados.score_etr + '</div></div>';
     if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
     if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
-    html += '<button class="btn primary" onclick=\'gerarPDF(' + JSON.stringify(dados).replace(/'/g, "\\'") + ')\'>GERAR RELATORIO PDF</button>';
+    html += '<button class="btn primary" onclick="gerarPDF()">GERAR RELATORIO PDF</button>';
+    html += '<button class="btn green" onclick="abrirSimulacao3D()">VER SIMULACAO 3D DO SUBSOLO</button>';
+    html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
     r.innerHTML = html; r.style.display = 'block';
+    window.ultimaAnalise = dados;
+    
     if (marker) map.removeLayer(marker); if (circle) map.removeLayer(circle);
     marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
     map.setView([lat, lng], 11);
+    
     if (dados.pontos_proximos) {
         dados.pontos_proximos.forEach(p => {
             let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
@@ -103,16 +132,113 @@ function renderizarResultado(dados, lat, lng) {
         });
     }
 }
+
 function carregarSatelite() {
     if (satLayer) { map.removeLayer(satelLayer); satLayer = null; return; }
     const dataOntem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     satLayer = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/' + dataOntem + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, attribution: 'NASA GIBS / MODIS' }).addTo(map);
 }
-function gerarPDF(dados) {
-    fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) })
+
+function gerarPDF() {
+    if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
+    fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
     .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_olho_deus.pdf'; a.click(); URL.revokeObjectURL(url); })
     .catch(e => alert('Erro ao gerar PDF: ' + e.message));
 }
+
+function gerarMemorial() {
+    if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
+    fetch('/api/gerar-memorial', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'memorial_descritivo.pdf'; a.click(); URL.revokeObjectURL(url); })
+    .catch(e => alert('Erro ao gerar memorial: ' + e.message));
+}
+
+function abrirSimulacao3D() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
+    if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas validas primeiro'); return; }
+    document.getElementById('modal3d').style.display = 'flex';
+    fetch('/api/simular-subsolo', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({lat: lat, lng: lng, resultado_analise: window.ultimaAnalise})
+    })
+    .then(r => r.json())
+    .then(dados => {
+        document.getElementById('aviso3d').innerText = 'AVISO: ' + dados.aviso;
+        montarBloco3D(dados);
+    })
+    .catch(e => alert('Erro ao gerar simulacao: ' + e.message));
+}
+
+function fecharSimulacao3D() {
+    document.getElementById('modal3d').style.display = 'none';
+    if (animacaoId) cancelAnimationFrame(animacaoId);
+}
+
+function montarBloco3D(dados) {
+    const container = document.getElementById('canvas3d');
+    const largura = container.clientWidth;
+    const altura = container.clientHeight;
+    container.innerHTML = '';
+    
+    cena3d = new THREE.Scene();
+    cena3d.background = new THREE.Color(0x020408);
+    camera3d = new THREE.PerspectiveCamera(45, largura/altura, 0.1, 1000);
+    camera3d.position.set(8, 6, 10);
+    camera3d.lookAt(0, 0, 0);
+    renderizador3d = new THREE.WebGLRenderer({antialias: true});
+    renderizador3d.setSize(largura, altura);
+    container.appendChild(renderizador3d.domElement);
+    
+    cena3d.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const luzDirecional = new THREE.DirectionalLight(0xffffff, 0.8);
+    luzDirecional.position.set(10, 15, 10);
+    cena3d.add(luzDirecional);
+    
+    const escala = 2;
+    let yAtual = 0;
+    const larguraBloco = 6;
+    const profundidadeBloco = 6;
+    
+    dados.camadas.forEach((camada, index) => {
+        const espessura = (camada.espessura_cm / 100) * escala;
+        const geometria = new THREE.BoxGeometry(larguraBloco, espessura, profundidadeBloco);
+        const cor = new THREE.Color(camada.cor);
+        const material = new THREE.MeshPhongMaterial({ color: cor, transparent: true, opacity: 0.9, emissive: cor, emissiveIntensity: 0.1 });
+        const bloco = new THREE.Mesh(geometria, material);
+        bloco.position.y = yAtual + espessura/2;
+        cena3d.add(bloco);
+        const arestas = new THREE.EdgesGeometry(geometria);
+        const linhas = new THREE.LineSegments(arestas, new THREE.LineBasicMaterial({color: 0x00f0ff, linewidth: 1}));
+        linhas.position.y = yAtual + espessura/2;
+        cena3d.add(linhas);
+        yAtual += espessura;
+    });
+    
+    const alturaTotal = yAtual;
+    cena3d.children.forEach(obj => { if (obj.position && obj.geometry) obj.position.y -= alturaTotal/2; });
+    
+    const gridHelper = new THREE.GridHelper(15, 15, 0x00f0ff, 0x003344);
+    gridHelper.position.y = -alturaTotal/2 - 0.1;
+    cena3d.add(gridHelper);
+    
+    const legenda = document.getElementById('legenda3d');
+    legenda.innerHTML = dados.camadas.map(c => 
+        '<div style="display:flex; align-items:center; gap:5px;">' +
+            '<div style="width:15px; height:15px; background:' + c.cor + '; border:1px solid #00f0ff;"></div>' +
+            '<span style="color:#ccc;">' + c.tipo + ' (' + c.profundidade_cm + '-' + (c.profundidade_cm + c.espessura_cm) + 'cm)</span>' +
+        '</div>'
+    ).join('');
+    
+    function animar() {
+        animacaoId = requestAnimationFrame(animar);
+        cena3d.rotation.y += 0.005;
+        renderizador3d.render(cena3d, camera3d);
+    }
+    animar();
+}
+
 window.onload = initMap;
 </script>
 </body>
