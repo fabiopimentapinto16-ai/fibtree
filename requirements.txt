@@ -1,7 +1,0 @@
-flask
-flask-cors
-requests
-Pillow
-numpy
-reportlab
-gunicorn
