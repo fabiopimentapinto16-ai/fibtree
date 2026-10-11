@@ -41,7 +41,6 @@ def calcular_score(lat, lng, dados_satelite=None):
     evidencias_ouro = []
     evidencias_etr = []
     pontos_proximos = []
-    
     for r in REGIOES:
         dist_km = calcular_distancia_km(lat, lng, r["lat"], r["lng"])
         if dist_km <= 15:
@@ -49,58 +48,33 @@ def calcular_score(lat, lng, dados_satelite=None):
             elif dist_km < 5: pontos = 25; dentro = False
             elif dist_km < 10: pontos = 15; dentro = False
             else: pontos = 8; dentro = False
-            
             if r["tipo"] == "ouro":
                 score_ouro += pontos
                 evidencias_ouro.append(f"{r['nome']} a {dist_km:.1f} km")
             else:
                 score_etr += pontos
                 evidencias_etr.append(f"{r['nome']} a {dist_km:.1f} km")
-            
-            pontos_proximos.append({
-                "nome": r["nome"], "tipo": r["tipo"],
-                "distancia_km": round(dist_km, 1), "dentro": dentro,
-                "facilidade": r["facilidade"], "lat": r["lat"], "lng": r["lng"]
-            })
-    
+            pontos_proximos.append({"nome": r["nome"], "tipo": r["tipo"], "distancia_km": round(dist_km, 1), "dentro": dentro, "facilidade": r["facilidade"], "lat": r["lat"], "lng": r["lng"]})
     for p in pontos_proximos:
         if p["facilidade"] == "facil":
             if p["tipo"] == "ouro": score_ouro += 15; evidencias_ouro.append("Terreno favorável para detector (aluvião)")
             else: score_etr += 10; evidencias_etr.append("Terreno favorável para ETR")
-    
     if dados_satelite:
         fe = dados_satelite.get("oxido_ferro", 0)
         if fe > 0.7: score_ouro += 25; evidencias_ouro.append(f"Alta anomalia de óxido de ferro ({fe:.2f})")
         elif fe > 0.4: score_ouro += 12; evidencias_ouro.append(f"Anomalia moderada de óxido de ferro ({fe:.2f})")
-        
         carb = dados_satelite.get("carbonato_argila", 0)
         if carb > 0.7: score_etr += 25; evidencias_etr.append(f"Alta anomalia de carbonato/argila ({carb:.2f})")
         elif carb > 0.4: score_etr += 12; evidencias_etr.append(f"Anomalia moderada de carbonato/argila ({carb:.2f})")
-        
         th = dados_satelite.get("anomalia_radioativa", 0)
         if th > 0.6: score_etr += 20; evidencias_etr.append(f"Anomalia radioativa detectada ({th:.2f})")
-    
     score_ouro = min(100, score_ouro)
     score_etr = min(100, score_etr)
-    
     def classificar(s):
         if s >= 70: return "ALTO POTENCIAL"
         if s >= 45: return "MÉDIO POTENCIAL"
         if s >= 20: return "BAIXO POTENCIAL"
         return "SEM INDÍCIOS"
-    
     score_final = max(score_ouro, score_etr)
     tipo_principal = "ouro" if score_ouro >= score_etr else "ETR"
-    
-    return {
-        "score_final": score_final,
-        "classificacao": classificar(score_final),
-        "tipo_principal": tipo_principal,
-        "score_ouro": score_ouro,
-        "score_etr": score_etr,
-        "evidencias_ouro": evidencias_ouro,
-        "evidencias_etr": evidencias_etr,
-        "pontos_proximos": sorted(pontos_proximos, key=lambda x: x["distancia_km"]),
-        "coordenada": {"lat": lat, "lng": lng},
-        "raio_analisado_km": 15
-    }
+    return {"score_final": score_final, "classificacao": classificar(score_final), "tipo_principal": tipo_principal, "score_ouro": score_ouro, "score_etr": score_etr, "evidencias_ouro": evidencias_ouro, "evidencias_etr": evidencias_etr, "pontos_proximos": sorted(pontos_proximos, key=lambda x: x["distancia_km"]), "coordenada": {"lat": lat, "lng": lng}, "raio_analisado_km": 15}
