@@ -80,7 +80,7 @@ function initMap() {
         attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
 
-    // === NOVO: Clique no mapa para pegar coordenada ===
+    // Clique no mapa
     map.on('click', function(e) {
         const lat = e.latlng.lat.toFixed(6);
         const lng = e.latlng.lng.toFixed(6);
@@ -123,7 +123,6 @@ function renderizarResultado(dados, lat, lng) {
     if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
     if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
 
-    // === NOVO: Mostra processos SIGMINE se existirem ===
     if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) {
         html += '<div class="evidence-box" style="border-left-color:#00ff88;"><h4 style="color:#00ff88;">PROCESSOS SIGMINE PRÓXIMOS</h4><ul>';
         dados.pontos_sigmine.slice(0, 8).forEach(p => {
@@ -141,7 +140,6 @@ function renderizarResultado(dados, lat, lng) {
     marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
     map.setView([lat, lng], 11);
 
-    // Pontos próximos antigos
     if (dados.pontos_proximos) {
         dados.pontos_proximos.forEach(p => {
             let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
@@ -150,7 +148,6 @@ function renderizarResultado(dados, lat, lng) {
         });
     }
 
-    // === NOVO: Marcadores dos processos SIGMINE ===
     if (dados.pontos_sigmine) {
         dados.pontos_sigmine.forEach(p => {
             let icone = L.divIcon({
@@ -227,7 +224,7 @@ function montarBloco3D(dados) {
     let yAtual = 0;
     const larguraBloco = 6;
     const profundidadeBloco = 6;
-    dados.camadas.forEach((camada, index) => {
+    dados.camadas.forEach((camada) => {
         const espessura = (camada.espessura_cm / 100) * escala;
         const geometria = new THREE.BoxGeometry(larguraBloco, espessura, profundidadeBloco);
         const cor = new THREE.Color(camada.cor);
@@ -247,7 +244,7 @@ function montarBloco3D(dados) {
     gridHelper.position.y = -alturaTotal/2 - 0.1;
     cena3d.add(gridHelper);
 
-    // === NOVO: Legenda 3D com destaque para Zona Mineralizada ===
+    // Legenda 3D com destaque da Zona Mineralizada
     const legenda = document.getElementById('legenda3d');
     legenda.innerHTML = dados.camadas.map(c => {
         const isMineral = c.tipo && c.tipo.includes('MINERALIZADA');

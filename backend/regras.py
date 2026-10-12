@@ -69,13 +69,9 @@ def calcular_score(lat, lng, dados_satelite=None):
                 score_etr += pontos
                 evidencias_etr.append(f"{r['nome']} a {dist_km:.1f} km")
             pontos_proximos.append({
-                "nome": r["nome"],
-                "tipo": r["tipo"],
-                "distancia_km": round(dist_km, 1),
-                "dentro": dentro,
-                "facilidade": r["facilidade"],
-                "lat": r["lat"],
-                "lng": r["lng"]
+                "nome": r["nome"], "tipo": r["tipo"],
+                "distancia_km": round(dist_km, 1), "dentro": dentro,
+                "facilidade": r["facilidade"], "lat": r["lat"], "lng": r["lng"]
             })
 
     for p in pontos_proximos:
@@ -107,21 +103,17 @@ def calcular_score(lat, lng, dados_satelite=None):
             score_etr += 20
             evidencias_etr.append(f"Anomalia radioativa detectada ({th:.2f})")
 
-    # === NOVO: Cruzar com dados do SIGMINE ===
+    # === NOVO: Cruzamento com SIGMINE ===
     pontos_sigmine = []
     for s in DADOS_SIGMINE:
         try:
             dist_s = calcular_distancia_km(lat, lng, float(s["lat"]), float(s["lng"]))
             if dist_s <= 15:
                 pontos_sigmine.append({
-                    "nome": s.get("nome", ""),
-                    "subs": s.get("subs", ""),
-                    "uf": s.get("uf", ""),
-                    "processo": s.get("processo", ""),
-                    "fase": s.get("fase", ""),
-                    "distancia_km": round(dist_s, 2),
-                    "lat": float(s["lat"]),
-                    "lng": float(s["lng"])
+                    "nome": s.get("nome", ""), "subs": s.get("subs", ""),
+                    "uf": s.get("uf", ""), "processo": s.get("processo", ""),
+                    "fase": s.get("fase", ""), "distancia_km": round(dist_s, 2),
+                    "lat": float(s["lat"]), "lng": float(s["lng"])
                 })
                 subs_upper = s.get("subs", "").upper()
                 if "OURO" in subs_upper:
@@ -155,7 +147,7 @@ def calcular_score(lat, lng, dados_satelite=None):
         "evidencias_ouro": evidencias_ouro,
         "evidencias_etr": evidencias_etr,
         "pontos_proximos": sorted(pontos_proximos, key=lambda x: x["distancia_km"]),
-        "pontos_sigmine": pontos_sigmine,          # <-- NOVO
+        "pontos_sigmine": pontos_sigmine,
         "coordenada": {"lat": lat, "lng": lng},
         "raio_analisado_km": 15
     }
@@ -195,27 +187,22 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
             if "argila" in c["tipo"].lower() or "saprolito" in c["tipo"].lower():
                 c["descricao"] += " Zona de adsorção iônica de Terras Raras."
 
-    # === NOVO: Camada mineralizada quando score alto ===
+    # === NOVO: Camada mineralizada (score alto) ===
     if score >= 70:
         if tipo_principal == "ouro":
             camada_mineral = {
-                "profundidade_cm": 70,
-                "espessura_cm": 30,
-                "tipo": "ZONA MINERALIZADA (OURO)",
-                "cor": "#FFD700",
+                "profundidade_cm": 70, "espessura_cm": 30,
+                "tipo": "ZONA MINERALIZADA (OURO)", "cor": "#FFD700",
                 "descricao": "Camada com alta probabilidade de concentração de ouro."
             }
         else:
             camada_mineral = {
-                "profundidade_cm": 80,
-                "espessura_cm": 30,
-                "tipo": "ZONA MINERALIZADA (TERRAS RARAS)",
-                "cor": "#00FFFF",
+                "profundidade_cm": 80, "espessura_cm": 30,
+                "tipo": "ZONA MINERALIZADA (TERRAS RARAS)", "cor": "#00FFFF",
                 "descricao": "Camada com alta probabilidade de Terras Raras."
             }
         camadas.append(camada_mineral)
         camadas.sort(key=lambda x: x["profundidade_cm"])
-        # Recalcula as profundidades sequenciais
         prof_atual = 0
         for c in camadas:
             c["profundidade_cm"] = prof_atual
