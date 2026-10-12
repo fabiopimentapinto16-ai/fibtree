@@ -119,11 +119,11 @@ function renderizarResultado(dados, lat, lng) {
     html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
     r.innerHTML = html; r.style.display = 'block';
     window.ultimaAnalise = dados;
-    
+
     if (marker) map.removeLayer(marker); if (circle) map.removeLayer(circle);
     marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
     map.setView([lat, lng], 11);
-    
+
     if (dados.pontos_proximos) {
         dados.pontos_proximos.forEach(p => {
             let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
@@ -181,7 +181,7 @@ function montarBloco3D(dados) {
     const largura = container.clientWidth;
     const altura = container.clientHeight;
     container.innerHTML = '';
-    
+
     cena3d = new THREE.Scene();
     cena3d.background = new THREE.Color(0x020408);
     camera3d = new THREE.PerspectiveCamera(45, largura/altura, 0.1, 1000);
@@ -190,17 +190,17 @@ function montarBloco3D(dados) {
     renderizador3d = new THREE.WebGLRenderer({antialias: true});
     renderizador3d.setSize(largura, altura);
     container.appendChild(renderizador3d.domElement);
-    
+
     cena3d.add(new THREE.AmbientLight(0xffffff, 0.6));
     const luzDirecional = new THREE.DirectionalLight(0xffffff, 0.8);
     luzDirecional.position.set(10, 15, 10);
     cena3d.add(luzDirecional);
-    
+
     const escala = 2;
     let yAtual = 0;
     const larguraBloco = 6;
     const profundidadeBloco = 6;
-    
+
     dados.camadas.forEach((camada, index) => {
         const espessura = (camada.espessura_cm / 100) * escala;
         const geometria = new THREE.BoxGeometry(larguraBloco, espessura, profundidadeBloco);
@@ -215,22 +215,22 @@ function montarBloco3D(dados) {
         cena3d.add(linhas);
         yAtual += espessura;
     });
-    
+
     const alturaTotal = yAtual;
     cena3d.children.forEach(obj => { if (obj.position && obj.geometry) obj.position.y -= alturaTotal/2; });
-    
+
     const gridHelper = new THREE.GridHelper(15, 15, 0x00f0ff, 0x003344);
     gridHelper.position.y = -alturaTotal/2 - 0.1;
     cena3d.add(gridHelper);
-    
+
     const legenda = document.getElementById('legenda3d');
-    legenda.innerHTML = dados.camadas.map(c => 
+    legenda.innerHTML = dados.camadas.map(c =>
         '<div style="display:flex; align-items:center; gap:5px;">' +
             '<div style="width:15px; height:15px; background:' + c.cor + '; border:1px solid #00f0ff;"></div>' +
             '<span style="color:#ccc;">' + c.tipo + ' (' + c.profundidade_cm + '-' + (c.profundidade_cm + c.espessura_cm) + 'cm)</span>' +
         '</div>'
     ).join('');
-    
+
     function animar() {
         animacaoId = requestAnimationFrame(animar);
         cena3d.rotation.y += 0.005;
