@@ -1,4 +1,4 @@
-"""Motor de Regras - Olho de Deus (Ouro + Terras Raras + Metais Estratégicos)"""
+"""Motor de Regras - Olho de Deus"""
 import math
 import json
 import os
@@ -9,32 +9,33 @@ if os.path.exists(_caminho_json):
     try:
         with open(_caminho_json, "r", encoding="utf-8") as _f:
             DADOS_SIGMINE = json.load(_f)
+        print(f"[regras] Carregados {len(DADOS_SIGMINE)} registros do SIGMINE")
     except Exception as _e:
-        print(f"Erro ao carregar SIGMINE: {_e}")
+        print(f"[regras] Erro ao carregar SIGMINE: {_e}")
 
 REGIOES = [
-    {"nome": "Serra dos Carajás", "lat": -6.0, "lng": -50.0, "raio": 2.0, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Serra dos Carajas", "lat": -6.0, "lng": -50.0, "raio": 2.0, "tipo": "ouro", "facilidade": "media"},
     {"nome": "Cumaru", "lat": -6.5, "lng": -50.5, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
     {"nome": "Serra Pelada", "lat": -5.9, "lng": -49.6, "raio": 0.8, "tipo": "ouro", "facilidade": "dificil"},
-    {"nome": "Tucumã", "lat": -6.7, "lng": -51.2, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
-    {"nome": "Quadrilátero Ferrífero", "lat": -20.2, "lng": -43.8, "raio": 1.5, "tipo": "ouro", "facilidade": "dificil"},
+    {"nome": "Tucuma", "lat": -6.7, "lng": -51.2, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Quadrilatero Ferrifero", "lat": -20.2, "lng": -43.8, "raio": 1.5, "tipo": "ouro", "facilidade": "dificil"},
     {"nome": "Morro do Pilar", "lat": -19.2, "lng": -43.4, "raio": 0.5, "tipo": "ouro", "facilidade": "dificil"},
     {"nome": "Jacobina", "lat": -11.2, "lng": -40.5, "raio": 1.0, "tipo": "ouro", "facilidade": "dificil"},
-    {"nome": "Crixás", "lat": -14.5, "lng": -49.9, "raio": 1.0, "tipo": "ouro", "facilidade": "dificil"},
+    {"nome": "Crixas", "lat": -14.5, "lng": -49.9, "raio": 1.0, "tipo": "ouro", "facilidade": "dificil"},
     {"nome": "Alta Floresta", "lat": -9.9, "lng": -56.1, "raio": 1.5, "tipo": "ouro", "facilidade": "facil"},
-    {"nome": "Província Parima", "lat": 3.5, "lng": -63.0, "raio": 2.5, "tipo": "ouro", "facilidade": "facil"},
-    {"nome": "Tepequém", "lat": 3.8, "lng": -61.7, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Provincia Parima", "lat": 3.5, "lng": -63.0, "raio": 2.5, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Tepequem", "lat": 3.8, "lng": -61.7, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
     {"nome": "Pacaraima", "lat": 4.5, "lng": -61.0, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
-    {"nome": "Uiramutã", "lat": 4.6, "lng": -60.2, "raio": 0.8, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Uiramuta", "lat": 4.6, "lng": -60.2, "raio": 0.8, "tipo": "ouro", "facilidade": "facil"},
     {"nome": "Mundau", "lat": -4.5, "lng": -39.5, "raio": 0.8, "tipo": "ouro", "facilidade": "dificil"},
-    {"nome": "Araxá", "lat": -19.6, "lng": -46.9, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
-    {"nome": "Poços de Caldas", "lat": -21.8, "lng": -46.5, "raio": 0.8, "tipo": "ETR", "facilidade": "media"},
-    {"nome": "Minaçu", "lat": -13.5, "lng": -48.2, "raio": 0.6, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Araxa", "lat": -19.6, "lng": -46.9, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
+    {"nome": "Pocos de Caldas", "lat": -21.8, "lng": -46.5, "raio": 0.8, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Minacu", "lat": -13.5, "lng": -48.2, "raio": 0.6, "tipo": "ETR", "facilidade": "media"},
     {"nome": "Complexo Barreira", "lat": 1.5, "lng": -61.0, "raio": 1.5, "tipo": "ETR", "facilidade": "media"},
     {"nome": "Morro dos Seis Lagos", "lat": 0.3, "lng": -66.5, "raio": 1.0, "tipo": "ETR", "facilidade": "dificil"},
-    {"nome": "Cinturão Ribeira", "lat": -24.5, "lng": -47.5, "raio": 1.5, "tipo": "ETR", "facilidade": "media"},
-    {"nome": "Barra do Itapirapuã", "lat": -24.7, "lng": -48.5, "raio": 0.6, "tipo": "ETR", "facilidade": "dificil"},
-    {"nome": "Catalão", "lat": -18.1, "lng": -47.9, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
+    {"nome": "Cinturao Ribeira", "lat": -24.5, "lng": -47.5, "raio": 1.5, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Barra do Itapirapua", "lat": -24.7, "lng": -48.5, "raio": 0.6, "tipo": "ETR", "facilidade": "dificil"},
+    {"nome": "Catalao", "lat": -18.1, "lng": -47.9, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
     {"nome": "Salitre", "lat": -19.0, "lng": -46.8, "raio": 0.5, "tipo": "ETR", "facilidade": "media"},
     {"nome": "Serra Negra", "lat": -8.1, "lng": -38.0, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
 ]
@@ -82,7 +83,6 @@ def calcular_score(lat, lng, dados_satelite=None):
         elif fe > 0.4:
             score_ouro += 12
             evidencias_ouro.append(f"Anomalia moderada de oxido de ferro ({fe:.2f}): +12 pts")
-
         carb = dados_satelite.get("carbonato_argila", 0)
         if carb > 0.7:
             score_etr += 25
@@ -90,7 +90,6 @@ def calcular_score(lat, lng, dados_satelite=None):
         elif carb > 0.4:
             score_etr += 12
             evidencias_etr.append(f"Anomalia moderada de carbonato/argila ({carb:.2f}): +12 pts")
-
         th = dados_satelite.get("anomalia_radioativa", 0)
         if th > 0.6:
             score_etr += 20
@@ -177,33 +176,18 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
     if tipo_principal == "ETR":
         for c in camadas:
             if "argila" in c["tipo"].lower() or "saprolito" in c["tipo"].lower():
-                c["descricao" ] += " Zona de adsorcao ionica de Terras Raras."
+                c["descricao"] += " Zona de adsorcao ionica de Terras Raras."
 
-    # === ESPESSURA DA CAMADA MINERALIZADA PROPORCIONAL AO SCORE ===
+    prof_atual = 0
     if score > 0:
-        espessura_dinamica = int((score / 100.0) * 80.0) # Varia de 0 a 80cm de forma proporcional
-        espessura_dinamica = max(10, espessura_dinamica) # Espessura mínima garantida de 10cm
-        
+        espessura_dinamica = int((score / 100.0) * 80.0)
+        espessura_dinamica = max(10, espessura_dinamica)
         if tipo_principal == "ouro":
-            camada_mineral = {
-                "profundidade_cm": 70,
-                "espessura_cm": espessura_dinamica,
-                "tipo": f"ZONA MINERALIZADA (OURO {score}%)",
-                "cor": "#FFD700",
-                "descricao": f"Camada mineralizada de Ouro calculada de forma proporcional ({espessura_dinamica}cm)."
-            }
+            camada_mineral = {"profundidade_cm": 70, "espessura_cm": espessura_dinamica, "tipo": f"ZONA MINERALIZADA (OURO {score}%)", "cor": "#FFD700", "descricao": f"Camada mineralizada de Ouro proporcional ({espessura_dinamica}cm)."}
         else:
-            camada_mineral = {
-                "profundidade_cm": 80,
-                "espessura_cm": espessura_dinamica,
-                "tipo": f"ZONA MINERALIZADA (TERRAS RARAS {score}%)",
-                "cor": "#00FFFF",
-                "descricao": f"Camada mineralizada de Terras Raras calculada de forma proporcional ({espessura_dinamica}cm)."
-            }
-        
+            camada_mineral = {"profundidade_cm": 80, "espessura_cm": espessura_dinamica, "tipo": f"ZONA MINERALIZADA (TERRAS RARAS {score}%)", "cor": "#00FFFF", "descricao": f"Camada mineralizada de Terras Raras proporcional ({espessura_dinamica}cm)."}
         camadas.append(camada_mineral)
         camadas.sort(key=lambda x: x["profundidade_cm"])
-        prof_atual = 0
         for c in camadas:
             c["profundidade_cm"] = prof_atual
             prof_atual += c["espessura_cm"]

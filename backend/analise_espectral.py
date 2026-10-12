@@ -1,4 +1,4 @@
-"""Análise Espectral - Band Ratios"""
+"""Analise Espectral - Band Ratios"""
 def calcular_band_ratios(bandas):
     b2 = bandas.get("b2", 1); b3 = bandas.get("b3", 1); b4 = bandas.get("b4", 1)
     b8 = bandas.get("b8", 1); b11 = bandas.get("b11", 1); b12 = bandas.get("b12", 1)

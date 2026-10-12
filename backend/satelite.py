@@ -1,4 +1,4 @@
-"""Módulo de Satélite - NASA GIBS"""
+"""Modulo de Satelite - NASA GIBS"""
 import requests
 from io import BytesIO
 from PIL import Image
@@ -8,7 +8,7 @@ import math
 
 class SateliteGIBS:
     BASE = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best"
-    CAMADAS = {"modis_terra": "MODIS_Terra_CorrectedReflectance_TrueColor", "modis_aqua": "MODIS_Aqua_CorrectedReflectance_TrueColor", "viirs": "VIIRS_SNPP_CorrectedReflectance_TrueColor"}
+    CAMADAS = {"modis_terra": "MODIS_Terra_CorrectedReflectance_TrueColor"}
     def __init__(self, camada="modis_terra"):
         self.camada = self.CAMADAS.get(camada, self.CAMADAS["modis_terra"])
     def _lat_lng_para_tile(self, lat, lng, zoom):
