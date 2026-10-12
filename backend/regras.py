@@ -60,14 +60,14 @@ def calcular_score(lat, lng, dados_satelite=None):
             elif dist_km < 5: pontos = 25; dentro = False
             elif dist_km < 10: pontos = 15; dentro = False
             else: pontos = 8; dentro = False
-            
+
             if r["tipo"] == "ouro":
                 score_ouro += pontos
                 evidencias_ouro.append(f"{r['nome']} a {dist_km:.1f} km (+{pontos} pts)")
             else:
                 score_etr += pontos
                 evidencias_etr.append(f"{r['nome']} a {dist_km:.1f} km (+{pontos} pts)")
-            
+
             pontos_proximos.append({
                 "nome": r["nome"], "tipo": r["tipo"],
                 "distancia_km": round(dist_km, 1), "dentro": dentro,
@@ -82,7 +82,7 @@ def calcular_score(lat, lng, dados_satelite=None):
         elif fe > 0.4:
             score_ouro += 12
             evidencias_ouro.append(f"Anomalia moderada de oxido de ferro ({fe:.2f}): +12 pts")
-            
+
         carb = dados_satelite.get("carbonato_argila", 0)
         if carb > 0.7:
             score_etr += 25
@@ -90,7 +90,7 @@ def calcular_score(lat, lng, dados_satelite=None):
         elif carb > 0.4:
             score_etr += 12
             evidencias_etr.append(f"Anomalia moderada de carbonato/argila ({carb:.2f}): +12 pts")
-            
+
         th = dados_satelite.get("anomalia_radioativa", 0)
         if th > 0.6:
             score_etr += 20
@@ -108,7 +108,6 @@ def calcular_score(lat, lng, dados_satelite=None):
                     "lat": float(s["lat"]), "lng": float(s["lng"])
                 })
                 subs_upper = s.get("subs", "").upper()
-                # Refino de pesos baseado em relevância de substâncias estratégicas
                 if "OURO" in subs_upper:
                     score_ouro += 10
                     evidencias_ouro.append(f"SIGMINE Ouro: Processo {s.get('processo')} (+10 pts)")
@@ -117,7 +116,7 @@ def calcular_score(lat, lng, dados_satelite=None):
                     evidencias_etr.append(f"SIGMINE Mineral Estrategico: Processo {s.get('processo')} (+10 pts)")
         except Exception:
             pass
-            
+
     pontos_sigmine = sorted(pontos_sigmine, key=lambda x: x["distancia_km"])[:30]
     score_ouro = min(100, score_ouro)
     score_etr = min(100, score_etr)
@@ -178,21 +177,30 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
     if tipo_principal == "ETR":
         for c in camadas:
             if "argila" in c["tipo"].lower() or "saprolito" in c["tipo"].lower():
-                c["descricao"] += " Zona de adsorcao ionica de Terras Raras."
+                c["descricao" ] += " Zona de adsorcao ionica de Terras Raras."
 
-    if score >= 70:
+    # === ESPESSURA DA CAMADA MINERALIZADA PROPORCIONAL AO SCORE ===
+    if score > 0:
+        espessura_dinamica = int((score / 100.0) * 80.0) # Varia de 0 a 80cm de forma proporcional
+        espessura_dinamica = max(10, espessura_dinamica) # Espessura mínima garantida de 10cm
+        
         if tipo_principal == "ouro":
             camada_mineral = {
-                "profundidade_cm": 70, "espessura_cm": 30,
-                "tipo": "ZONA MINERALIZADA (OURO)", "cor": "#FFD700",
-                "descricao": "Camada com alta probabilidade de concentracao de ouro."
+                "profundidade_cm": 70,
+                "espessura_cm": espessura_dinamica,
+                "tipo": f"ZONA MINERALIZADA (OURO {score}%)",
+                "cor": "#FFD700",
+                "descricao": f"Camada mineralizada de Ouro calculada de forma proporcional ({espessura_dinamica}cm)."
             }
         else:
             camada_mineral = {
-                "profundidade_cm": 80, "espessura_cm": 30,
-                "tipo": "ZONA MINERALIZADA (TERRAS RARAS)", "cor": "#00FFFF",
-                "descricao": "Camada com alta probabilidade de Terras Raras."
+                "profundidade_cm": 80,
+                "espessura_cm": espessura_dinamica,
+                "tipo": f"ZONA MINERALIZADA (TERRAS RARAS {score}%)",
+                "cor": "#00FFFF",
+                "descricao": f"Camada mineralizada de Terras Raras calculada de forma proporcional ({espessura_dinamica}cm)."
             }
+        
         camadas.append(camada_mineral)
         camadas.sort(key=lambda x: x["profundidade_cm"])
         prof_atual = 0
@@ -206,6 +214,6 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
         "tipo_principal": tipo_principal,
         "score": score,
         "camadas": camadas,
-        "profundidade_total_cm": 200,
-        "aviso": "SIMULACAO EDUCATIVA. Baseada em perfis geologicos tipicos. NAO substitui GPR ou sondagem."
+        "profundidade_total_cm": prof_atual if score > 0 else 200,
+        "aviso": "SIMULACAO EDUCATIVA PROPORCIONAL. Baseada em perfis geologicos tipicos. NAO substitui GPR ou sondagem."
     }
