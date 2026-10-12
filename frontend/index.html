@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OLHO DE DEUS</title>
+<title>🛰️ OLHO DE DEUS — HUD Avancado</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -59,6 +59,7 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3
     <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px; letter-spacing: 2px;">ANALISANDO...</div></div>
     <div class="result" id="result"></div>
 </div>
+
 <div id="modal3d" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,4,8,0.95); z-index:9999; justify-content:center; align-items:center;">
     <div style="width:90%; max-width:900px; height:85%; background:#0a1420; border:1px solid #00f0ff; border-radius:12px; padding:20px; position:relative; display:flex; flex-direction:column;">
         <button onclick="fecharSimulacao3D()" style="position:absolute; top:15px; right:15px; background:transparent; border:1px solid #00f0ff; color:#00f0ff; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:18px;">X</button>
@@ -68,19 +69,21 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3
         <div id="legenda3d" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; font-size:11px;"></div>
     </div>
 </div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-let map, marker, circle, gpsWatchId = null, satLayer = null;
+let map, marker, circle, gpsWatchId = null, satLayer = null, routeLine = null;
 let cena3d, camera3d, renderizador3d, animacaoId;
+let userLocation = null;
 
 function initMap() {
     map = L.map('map').setView([-15, -50], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 19
     }).addTo(map);
 
-    // Clique no mapa
     map.on('click', function(e) {
         const lat = e.latlng.lat.toFixed(6);
         const lng = e.latlng.lng.toFixed(6);
@@ -95,67 +98,106 @@ function ativarGPS() {
     if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
     if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
     gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
-        const lat = pos.coords.latitude.toFixed(6); const lng = pos.coords.longitude.toFixed(6);
-        document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        userLocation = [parseFloat(lat), parseFloat(lng)];
+        document.getElementById('lat').value = lat;
+        document.getElementById('lng').value = lng;
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
         analisar();
     }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 function analisar() {
-    const lat = parseFloat(document.getElementById('lat').value); const lng = parseFloat(document.getElementById('lng').value);
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas validas'); return; }
-    document.getElementById('loading').style.display = 'block'; document.getElementById('result').style.display = 'none';
-    fetch('/api/analisar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true}) })
-    .then(r => r.json()).then(dados => { document.getElementById('loading').style.display = 'none'; renderizarResultado(dados, lat, lng); })
-    .catch(e => { document.getElementById('loading').style.display = 'none'; alert('Erro na analise: ' + e.message); });
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    
+    fetch('/api/analisar', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true}) 
+    })
+    .then(r => r.json())
+    .then(dados => {
+        document.getElementById('loading').style.display = 'none';
+        renderizarResultado(dados, lat, lng);
+    })
+    .catch(e => {
+        document.getElementById('loading').style.display = 'none';
+        alert('Erro na analise: ' + e.message);
+    });
 }
 
 function renderizarResultado(dados, lat, lng) {
     const r = document.getElementById('result');
     let corClassif = dados.score_final >= 70 ? 'var(--green)' : dados.score_final >= 45 ? 'var(--yellow)' : 'var(--red)';
-    let iconeTipo = dados.tipo_principal === 'ouro' ? 'OURO' : 'TERRAS RARAS';
+    let iconeTipo = dados.tipo_principal === 'ouro' ? 'OURO 🥇' : 'TERRAS RARAS 💎';
+    
     let html = '<div class="score-display">';
     html += '<div class="value" style="color:' + corClassif + '; text-shadow: 0 0 30px ' + corClassif + ';">' + dados.score_final + '</div>';
     html += '<div class="classif" style="color:' + corClassif + ';">' + dados.classificacao + '</div>';
     html += '<div class="type">' + iconeTipo + '</div>';
     html += '<div style="font-size: 11px; opacity: 0.6; margin-top: 8px;">Score Ouro: ' + dados.score_ouro + ' | Score ETR: ' + dados.score_etr + '</div></div>';
-    if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
-    if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
-
-    if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) {
-        html += '<div class="evidence-box" style="border-left-color:#00ff88;"><h4 style="color:#00ff88;">PROCESSOS SIGMINE PRÓXIMOS</h4><ul>';
-        dados.pontos_sigmine.slice(0, 8).forEach(p => {
-            html += '<li>' + (p.processo || '') + ' | ' + (p.subs || '') + ' | ' + (p.fase || '') + ' | ' + p.distancia_km + ' km</li>';
-        });
+    
+    if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) {
+        html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>';
+        dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>');
+        html += '</ul></div>';
+    }
+    if (dados.evidencias_etr && dados.evidencias_etr.length > 0) {
+        html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>';
+        dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>');
         html += '</ul></div>';
     }
 
+    if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) {
+        html += '<div class="evidence-box" style="border-left-color: var(--green);"><h4>PROCESSOS SIGMINE PRÓXIMOS</h4><ul>';
+        dados.pontos_sigmine.slice(0, 10).forEach(p => {
+            html += '<li>' + (p.processo || '') + ' | ' + (p.subs || '') + ' | ' + p.distancia_km + ' km</li>';
+        });
+        html += '</ul></div>';
+    }
+    
     html += '<button class="btn primary" onclick="gerarPDF()">GERAR RELATORIO PDF</button>';
     html += '<button class="btn green" onclick="abrirSimulacao3D()">VER SIMULACAO 3D DO SUBSOLO</button>';
     html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
-    r.innerHTML = html; r.style.display = 'block';
+    
+    r.innerHTML = html;
+    r.style.display = 'block';
     window.ultimaAnalise = dados;
-    if (marker) map.removeLayer(marker); if (circle) map.removeLayer(circle);
-    marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
+
+    if (marker) map.removeLayer(marker);
+    if (circle) map.removeLayer(circle);
+    if (routeLine) map.removeLayer(routeLine);
+
+    marker = L.marker([lat, lng]).addTo(map).bindPopup('<b>Alvo de Analise</b>').openPopup();
+    circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
     map.setView([lat, lng], 11);
+
+    // Gerar rota visual se houver localizacao do GPS ativo
+    if (userLocation && dados.score_final >= 70) {
+        routeLine = L.polyline([userLocation, [lat, lng]], {
+            color: 'var(--cyan)', 
+            weight: 4, 
+            dashArray: '10, 10', 
+            opacity: 0.8
+        }).addTo(map);
+    }
 
     if (dados.pontos_proximos) {
         dados.pontos_proximos.forEach(p => {
-            let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
-            let icone = L.divIcon({ html: '<div style="background:' + corPonto + '; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px ' + corPonto + ';"></div>', className: '', iconSize: [14, 14] });
-            L.marker([p.lat, p.lng], {icon: icone}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>Tipo: ' + p.tipo.toUpperCase() + '<br>Distancia: ' + p.distancia_km + ' km');
-        });
-    }
-
-    if (dados.pontos_sigmine) {
-        dados.pontos_sigmine.forEach(p => {
+            let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff';
+            if (p.dentro) corPonto = '#ff3355';
             let icone = L.divIcon({
-                html: '<div style="background:#00ff88; width: 12px; height: 12px; border-radius: 2px; border: 1px solid #fff; box-shadow: 0 0 8px #00ff88;"></div>',
-                className: '', iconSize: [12, 12]
+                html: '<div style="background:' + corPonto + '; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px ' + corPonto + ';"></div>',
+                className: '',
+                iconSize: [14, 14]
             });
             L.marker([p.lat, p.lng], {icon: icone}).addTo(map)
-                .bindPopup('<b>SIGMINE: ' + (p.processo || '') + '</b><br>Substância: ' + (p.subs || '') + '<br>Fase: ' + (p.fase || '') + '<br>Distância: ' + p.distancia_km + ' km');
+                .bindPopup('<b>' + p.nome + '</b><br>Tipo: ' + p.tipo.toUpperCase() + '<br>Distancia: ' + p.distancia_km + ' km');
         });
     }
 }
@@ -244,7 +286,6 @@ function montarBloco3D(dados) {
     gridHelper.position.y = -alturaTotal/2 - 0.1;
     cena3d.add(gridHelper);
 
-    // Legenda 3D com destaque da Zona Mineralizada
     const legenda = document.getElementById('legenda3d');
     legenda.innerHTML = dados.camadas.map(c => {
         const isMineral = c.tipo && c.tipo.includes('MINERALIZADA');

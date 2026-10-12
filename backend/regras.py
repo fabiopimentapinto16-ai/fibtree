@@ -1,18 +1,16 @@
-"""Motor de Regras - Olho de Deus (Ouro + Terras Raras)"""
+"""Motor de Regras - Olho de Deus (Ouro + Terras Raras + Metais Estratégicos)"""
 import math
 import json
 import os
 
-# === Carregar dados do SIGMINE ===
 DADOS_SIGMINE = []
 _caminho_json = os.path.join(os.path.dirname(__file__), "dados_sigmine.json")
 if os.path.exists(_caminho_json):
     try:
         with open(_caminho_json, "r", encoding="utf-8") as _f:
             DADOS_SIGMINE = json.load(_f)
-        print(f"[regras] Carregados {len(DADOS_SIGMINE)} registros do SIGMINE")
     except Exception as _e:
-        print(f"[regras] Erro ao carregar SIGMINE: {_e}")
+        print(f"Erro ao carregar SIGMINE: {_e}")
 
 REGIOES = [
     {"nome": "Serra dos Carajás", "lat": -6.0, "lng": -50.0, "raio": 2.0, "tipo": "ouro", "facilidade": "media"},
@@ -62,48 +60,42 @@ def calcular_score(lat, lng, dados_satelite=None):
             elif dist_km < 5: pontos = 25; dentro = False
             elif dist_km < 10: pontos = 15; dentro = False
             else: pontos = 8; dentro = False
+            
             if r["tipo"] == "ouro":
                 score_ouro += pontos
-                evidencias_ouro.append(f"{r['nome']} a {dist_km:.1f} km")
+                evidencias_ouro.append(f"{r['nome']} a {dist_km:.1f} km (+{pontos} pts)")
             else:
                 score_etr += pontos
-                evidencias_etr.append(f"{r['nome']} a {dist_km:.1f} km")
+                evidencias_etr.append(f"{r['nome']} a {dist_km:.1f} km (+{pontos} pts)")
+            
             pontos_proximos.append({
                 "nome": r["nome"], "tipo": r["tipo"],
                 "distancia_km": round(dist_km, 1), "dentro": dentro,
                 "facilidade": r["facilidade"], "lat": r["lat"], "lng": r["lng"]
             })
 
-    for p in pontos_proximos:
-        if p["facilidade"] == "facil":
-            if p["tipo"] == "ouro":
-                score_ouro += 15
-                evidencias_ouro.append("Terreno favorável para detector (aluvião)")
-            else:
-                score_etr += 10
-                evidencias_etr.append("Terreno favorável para ETR")
-
     if dados_satelite:
         fe = dados_satelite.get("oxido_ferro", 0)
         if fe > 0.7:
             score_ouro += 25
-            evidencias_ouro.append(f"Alta anomalia de óxido de ferro ({fe:.2f})")
+            evidencias_ouro.append(f"Alta anomalia de oxido de ferro ({fe:.2f}): +25 pts")
         elif fe > 0.4:
             score_ouro += 12
-            evidencias_ouro.append(f"Anomalia moderada de óxido de ferro ({fe:.2f})")
+            evidencias_ouro.append(f"Anomalia moderada de oxido de ferro ({fe:.2f}): +12 pts")
+            
         carb = dados_satelite.get("carbonato_argila", 0)
         if carb > 0.7:
             score_etr += 25
-            evidencias_etr.append(f"Alta anomalia de carbonato/argila ({carb:.2f})")
+            evidencias_etr.append(f"Alta anomalia de carbonato/argila ({carb:.2f}): +25 pts")
         elif carb > 0.4:
             score_etr += 12
-            evidencias_etr.append(f"Anomalia moderada de carbonato/argila ({carb:.2f})")
+            evidencias_etr.append(f"Anomalia moderada de carbonato/argila ({carb:.2f}): +12 pts")
+            
         th = dados_satelite.get("anomalia_radioativa", 0)
         if th > 0.6:
             score_etr += 20
-            evidencias_etr.append(f"Anomalia radioativa detectada ({th:.2f})")
+            evidencias_etr.append(f"Anomalia radioativa detectada ({th:.2f}): +20 pts")
 
-    # === NOVO: Cruzamento com SIGMINE ===
     pontos_sigmine = []
     for s in DADOS_SIGMINE:
         try:
@@ -116,24 +108,25 @@ def calcular_score(lat, lng, dados_satelite=None):
                     "lat": float(s["lat"]), "lng": float(s["lng"])
                 })
                 subs_upper = s.get("subs", "").upper()
+                # Refino de pesos baseado em relevância de substâncias estratégicas
                 if "OURO" in subs_upper:
-                    score_ouro += 5
-                    evidencias_ouro.append(f"SIGMINE: {s.get('processo', '')} ({s.get('fase', '')})")
-                elif "TERRAS RARAS" in subs_upper or "ETR" in subs_upper:
-                    score_etr += 5
-                    evidencias_etr.append(f"SIGMINE: {s.get('processo', '')} ({s.get('fase', '')})")
+                    score_ouro += 10
+                    evidencias_ouro.append(f"SIGMINE Ouro: Processo {s.get('processo')} (+10 pts)")
+                elif any(x in subs_upper for x in ["TERRAS RARAS", "ETR", "LITIO", "NIOBIO"]):
+                    score_etr += 10
+                    evidencias_etr.append(f"SIGMINE Mineral Estrategico: Processo {s.get('processo')} (+10 pts)")
         except Exception:
             pass
+            
     pontos_sigmine = sorted(pontos_sigmine, key=lambda x: x["distancia_km"])[:30]
-
     score_ouro = min(100, score_ouro)
     score_etr = min(100, score_etr)
 
     def classificar(s):
         if s >= 70: return "ALTO POTENCIAL"
-        if s >= 45: return "MÉDIO POTENCIAL"
+        if s >= 45: return "MEDIO POTENCIAL"
         if s >= 20: return "BAIXO POTENCIAL"
-        return "SEM INDÍCIOS"
+        return "SEM INDICIOS"
 
     score_final = max(score_ouro, score_etr)
     tipo_principal = "ouro" if score_ouro >= score_etr else "ETR"
@@ -163,37 +156,36 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
     camadas = []
     if facilidade == "facil":
         camadas = [
-            {"profundidade_cm": 0, "espessura_cm": 30, "tipo": "Solo orgânico / areia fina", "cor": "#8B7355", "descricao": "Camada superficial com matéria orgânica."},
+            {"profundidade_cm": 0, "espessura_cm": 30, "tipo": "Solo organico / areia fina", "cor": "#8B7355", "descricao": "Camada superficial com materia organica."},
             {"profundidade_cm": 30, "espessura_cm": 40, "tipo": "Areia grossa / cascalho", "cor": "#A0522D", "descricao": "Cascalho de fundo (stone line). Ouro tende a se concentrar."},
             {"profundidade_cm": 70, "espessura_cm": 50, "tipo": "Cascalho com argila", "cor": "#D2691E", "descricao": "Mistura de cascalho e argila."},
-            {"profundidade_cm": 120, "espessura_cm": 80, "tipo": "Saprolito / rocha alterada", "cor": "#696969", "descricao": "Rocha mãe já intemperizada."},
+            {"profundidade_cm": 120, "espessura_cm": 80, "tipo": "Saprolito / rocha alterada", "cor": "#696969", "descricao": "Rocha mae ja intemperizada."},
         ]
     elif facilidade == "dificil":
         camadas = [
             {"profundidade_cm": 0, "espessura_cm": 20, "tipo": "Solo residual", "cor": "#8B7355", "descricao": "Camada fina de solo sobre rocha."},
             {"profundidade_cm": 20, "espessura_cm": 30, "tipo": "Saprolito", "cor": "#A0522D", "descricao": "Rocha parcialmente alterada."},
-            {"profundidade_cm": 50, "espessura_cm": 150, "tipo": "Rocha maciça", "cor": "#696969", "descricao": "Rocha sã. Ouro em veios de quartzo."},
+            {"profundidade_cm": 50, "espessura_cm": 150, "tipo": "Rocha macica", "cor": "#696969", "descricao": "Rocha sa. Ouro em veios de quartzo."},
         ]
     else:
         camadas = [
             {"profundidade_cm": 0, "espessura_cm": 25, "tipo": "Solo / areia", "cor": "#8B7355", "descricao": "Camada superficial mista."},
             {"profundidade_cm": 25, "espessura_cm": 55, "tipo": "Argila / cascalho", "cor": "#A0522D", "descricao": "Mistura de argila e cascalho."},
-            {"profundidade_cm": 80, "espessura_cm": 70, "tipo": "Saprolito argiloso", "cor": "#D2691E", "descricao": "Zona de alteração com argilas. Típica de Terras Raras."},
-            {"profundidade_cm": 150, "espessura_cm": 50, "tipo": "Rocha alterada", "cor": "#696969", "descricao": "Rocha mãe intemperizada."},
+            {"profundidade_cm": 80, "espessura_cm": 70, "tipo": "Saprolito argiloso", "cor": "#D2691E", "descricao": "Zona de alteracao com argilas. Tipica de Terras Raras."},
+            {"profundidade_cm": 150, "espessura_cm": 50, "tipo": "Rocha alterada", "cor": "#696969", "descricao": "Rocha mae intemperizada."},
         ]
 
     if tipo_principal == "ETR":
         for c in camadas:
             if "argila" in c["tipo"].lower() or "saprolito" in c["tipo"].lower():
-                c["descricao"] += " Zona de adsorção iônica de Terras Raras."
+                c["descricao"] += " Zona de adsorcao ionica de Terras Raras."
 
-    # === NOVO: Camada mineralizada (score alto) ===
     if score >= 70:
         if tipo_principal == "ouro":
             camada_mineral = {
                 "profundidade_cm": 70, "espessura_cm": 30,
                 "tipo": "ZONA MINERALIZADA (OURO)", "cor": "#FFD700",
-                "descricao": "Camada com alta probabilidade de concentração de ouro."
+                "descricao": "Camada com alta probabilidade de concentracao de ouro."
             }
         else:
             camada_mineral = {
@@ -215,5 +207,5 @@ def calcular_simulacao_subsolo(resultado_analise, lat, lng):
         "score": score,
         "camadas": camadas,
         "profundidade_total_cm": 200,
-        "aviso": "SIMULAÇÃO EDUCATIVA. Baseada em perfis geológicos típicos. NÃO substitui GPR ou sondagem."
+        "aviso": "SIMULACAO EDUCATIVA. Baseada em perfis geologicos tipicos. NAO substitui GPR ou sondagem."
     }
