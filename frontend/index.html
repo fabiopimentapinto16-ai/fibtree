@@ -59,7 +59,6 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3
     <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px; letter-spacing: 2px;">ANALISANDO...</div></div>
     <div class="result" id="result"></div>
 </div>
-
 <div id="modal3d" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,4,8,0.95); z-index:9999; justify-content:center; align-items:center;">
     <div style="width:90%; max-width:900px; height:85%; background:#0a1420; border:1px solid #00f0ff; border-radius:12px; padding:20px; position:relative; display:flex; flex-direction:column;">
         <button onclick="fecharSimulacao3D()" style="position:absolute; top:15px; right:15px; background:transparent; border:1px solid #00f0ff; color:#00f0ff; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:18px;">X</button>
@@ -69,7 +68,6 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,240,255,0.3
         <div id="legenda3d" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; font-size:11px;"></div>
     </div>
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -81,6 +79,16 @@ function initMap() {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
+
+    // === NOVO: Clique no mapa para pegar coordenada ===
+    map.on('click', function(e) {
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+        document.getElementById('lat').value = lat;
+        document.getElementById('lng').value = lng;
+        document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
+        analisar();
+    });
 }
 
 function ativarGPS() {
@@ -114,16 +122,26 @@ function renderizarResultado(dados, lat, lng) {
     html += '<div style="font-size: 11px; opacity: 0.6; margin-top: 8px;">Score Ouro: ' + dados.score_ouro + ' | Score ETR: ' + dados.score_etr + '</div></div>';
     if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
     if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
+
+    // === NOVO: Mostra processos SIGMINE se existirem ===
+    if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) {
+        html += '<div class="evidence-box" style="border-left-color:#00ff88;"><h4 style="color:#00ff88;">PROCESSOS SIGMINE PRÓXIMOS</h4><ul>';
+        dados.pontos_sigmine.slice(0, 8).forEach(p => {
+            html += '<li>' + (p.processo || '') + ' | ' + (p.subs || '') + ' | ' + (p.fase || '') + ' | ' + p.distancia_km + ' km</li>';
+        });
+        html += '</ul></div>';
+    }
+
     html += '<button class="btn primary" onclick="gerarPDF()">GERAR RELATORIO PDF</button>';
     html += '<button class="btn green" onclick="abrirSimulacao3D()">VER SIMULACAO 3D DO SUBSOLO</button>';
     html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
     r.innerHTML = html; r.style.display = 'block';
     window.ultimaAnalise = dados;
-
     if (marker) map.removeLayer(marker); if (circle) map.removeLayer(circle);
     marker = L.marker([lat, lng]).addTo(map); circle = L.circle([lat, lng], {radius: 15000, color: corClassif, fillOpacity: 0.1}).addTo(map);
     map.setView([lat, lng], 11);
 
+    // Pontos próximos antigos
     if (dados.pontos_proximos) {
         dados.pontos_proximos.forEach(p => {
             let corPonto = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff'; if (p.dentro) corPonto = '#ff3355';
@@ -131,10 +149,22 @@ function renderizarResultado(dados, lat, lng) {
             L.marker([p.lat, p.lng], {icon: icone}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>Tipo: ' + p.tipo.toUpperCase() + '<br>Distancia: ' + p.distancia_km + ' km');
         });
     }
+
+    // === NOVO: Marcadores dos processos SIGMINE ===
+    if (dados.pontos_sigmine) {
+        dados.pontos_sigmine.forEach(p => {
+            let icone = L.divIcon({
+                html: '<div style="background:#00ff88; width: 12px; height: 12px; border-radius: 2px; border: 1px solid #fff; box-shadow: 0 0 8px #00ff88;"></div>',
+                className: '', iconSize: [12, 12]
+            });
+            L.marker([p.lat, p.lng], {icon: icone}).addTo(map)
+                .bindPopup('<b>SIGMINE: ' + (p.processo || '') + '</b><br>Substância: ' + (p.subs || '') + '<br>Fase: ' + (p.fase || '') + '<br>Distância: ' + p.distancia_km + ' km');
+        });
+    }
 }
 
 function carregarSatelite() {
-    if (satLayer) { map.removeLayer(satelLayer); satLayer = null; return; }
+    if (satLayer) { map.removeLayer(satLayer); satLayer = null; return; }
     const dataOntem = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     satLayer = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/' + dataOntem + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, attribution: 'NASA GIBS / MODIS' }).addTo(map);
 }
@@ -181,7 +211,6 @@ function montarBloco3D(dados) {
     const largura = container.clientWidth;
     const altura = container.clientHeight;
     container.innerHTML = '';
-
     cena3d = new THREE.Scene();
     cena3d.background = new THREE.Color(0x020408);
     camera3d = new THREE.PerspectiveCamera(45, largura/altura, 0.1, 1000);
@@ -190,17 +219,14 @@ function montarBloco3D(dados) {
     renderizador3d = new THREE.WebGLRenderer({antialias: true});
     renderizador3d.setSize(largura, altura);
     container.appendChild(renderizador3d.domElement);
-
     cena3d.add(new THREE.AmbientLight(0xffffff, 0.6));
     const luzDirecional = new THREE.DirectionalLight(0xffffff, 0.8);
     luzDirecional.position.set(10, 15, 10);
     cena3d.add(luzDirecional);
-
     const escala = 2;
     let yAtual = 0;
     const larguraBloco = 6;
     const profundidadeBloco = 6;
-
     dados.camadas.forEach((camada, index) => {
         const espessura = (camada.espessura_cm / 100) * escala;
         const geometria = new THREE.BoxGeometry(larguraBloco, espessura, profundidadeBloco);
@@ -215,21 +241,23 @@ function montarBloco3D(dados) {
         cena3d.add(linhas);
         yAtual += espessura;
     });
-
     const alturaTotal = yAtual;
     cena3d.children.forEach(obj => { if (obj.position && obj.geometry) obj.position.y -= alturaTotal/2; });
-
     const gridHelper = new THREE.GridHelper(15, 15, 0x00f0ff, 0x003344);
     gridHelper.position.y = -alturaTotal/2 - 0.1;
     cena3d.add(gridHelper);
 
+    // === NOVO: Legenda 3D com destaque para Zona Mineralizada ===
     const legenda = document.getElementById('legenda3d');
-    legenda.innerHTML = dados.camadas.map(c =>
-        '<div style="display:flex; align-items:center; gap:5px;">' +
-            '<div style="width:15px; height:15px; background:' + c.cor + '; border:1px solid #00f0ff;"></div>' +
-            '<span style="color:#ccc;">' + c.tipo + ' (' + c.profundidade_cm + '-' + (c.profundidade_cm + c.espessura_cm) + 'cm)</span>' +
-        '</div>'
-    ).join('');
+    legenda.innerHTML = dados.camadas.map(c => {
+        const isMineral = c.tipo && c.tipo.includes('MINERALIZADA');
+        const corTexto = isMineral ? c.cor : '#ccc';
+        const brilho = isMineral ? 'box-shadow: 0 0 10px ' + c.cor + '; border: 2px solid ' + c.cor + ';' : 'border:1px solid #00f0ff;';
+        return '<div style="display:flex; align-items:center; gap:5px;">' +
+            '<div style="width:15px; height:15px; background:' + c.cor + '; ' + brilho + '"></div>' +
+            '<span style="color:' + corTexto + '; font-weight:' + (isMineral ? '700' : '400') + ';">' + c.tipo + ' (' + c.profundidade_cm + '-' + (c.profundidade_cm + c.espessura_cm) + 'cm)</span>' +
+        '</div>';
+    }).join('');
 
     function animar() {
         animacaoId = requestAnimationFrame(animar);
