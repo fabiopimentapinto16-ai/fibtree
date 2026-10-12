@@ -1,4 +1,4 @@
-"""Gerador de PDF - Olho de Deus (com mapa estatico)"""
+"""Gerador de PDF - Grãos de Ouro"""
 import os
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -6,31 +6,82 @@ from reportlab.lib.units import cm
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
 from datetime import datetime
-from PIL import Image
+from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
 import math
+
+try:
+    import qrcode
+    QR_CODE_DISPONIVEL = True
+except ImportError:
+    QR_CODE_DISPONIVEL = False
 
 COR_AZUL_ESCURO = HexColor('#0a4d68')
 COR_AZUL_MEDIO = HexColor('#088395')
 COR_CINZA_CLARO = HexColor('#f5f5f5')
 COR_BRANCO = HexColor('#ffffff')
 
-def gerar_mapa_estatico(lat, lng, zoom=11):
-    n = 2 ** zoom
-    x_tile = int((lng + 180.0) / 360.0 * n)
-    lat_rad = math.radians(lat)
-    y_tile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
-    url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{y_tile}/{x_tile}"
+def gerar_mapa_com_marcadores(lat, lng, pontos_proximos=None, pontos_sigmine=None, caminho="/tmp/mapa_marcadores.jpg", zoom=11):
+    """Baixa o tile do Esri e desenha circulos nos pontos de interesse."""
     try:
+        n = 2 ** zoom
+        x_tile = int((lng + 180.0) / 360.0 * n)
+        lat_rad = math.radians(lat)
+        y_tile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+        url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{y_tile}/{x_tile}"
         r = requests.get(url, timeout=10)
         r.raise_for_status()
-        img = Image.open(BytesIO(r.content))
-        caminho = "/tmp/mapa_analise.jpg"
-        img.save(caminho, "JPEG")
+        img = Image.open(BytesIO(r.content)).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        w, h = img.size
+
+        # Marcador central (azul)
+        draw.ellipse([w/2-8, h/2-8, w/2+8, h/2+8], fill="blue", outline="white", width=2)
+
+        # Converte lat/lng para pixel no tile (aproximacao)
+        def latlng_para_pixel(p_lat, p_lng):
+            # Fator de escala: quanto cada grau ocupa em pixels nesse zoom
+            fator = 256 * (2 ** zoom) / 360.0
+            px = (p_lng - lng) * fator + w/2
+            py = -(p_lat - lat) * fator + h/2
+            return (px, py)
+
+        if pontos_proximos:
+            for p in pontos_proximos[:15]:
+                try:
+                    cor = "orange" if p.get("tipo") == "ouro" else "cyan"
+                    px, py = latlng_para_pixel(p["lat"], p["lng"])
+                    if 0 <= px <= w and 0 <= py <= h:
+                        draw.ellipse([px-5, py-5, px+5, py+5], fill=cor, outline="white", width=1)
+                except Exception:
+                    pass
+
+        if pontos_sigmine:
+            for p in pontos_sigmine[:20]:
+                try:
+                    px, py = latlng_para_pixel(p["lat"], p["lng"])
+                    if 0 <= px <= w and 0 <= py <= h:
+                        draw.ellipse([px-3, py-3, px+3, py+3], fill="green", outline="white", width=1)
+                except Exception:
+                    pass
+
+        img.save(caminho, "JPEG", quality=85)
         return caminho
     except Exception as e:
-        print(f"Erro ao baixar mapa: {e}")
+        print(f"Erro ao gerar mapa com marcadores: {e}")
+        return None
+
+def gerar_qr_code(lat, lng, caminho="/tmp/qrcode.png"):
+    if not QR_CODE_DISPONIVEL:
+        return None
+    try:
+        url = f"https://earth.google.com/web/@{lat},{lng},1000a,1000d,35y,0h,0t,0r"
+        img = qrcode.make(url)
+        img.save(caminho)
+        return caminho
+    except Exception as e:
+        print(f"Erro QR: {e}")
         return None
 
 def _tabela_dados(dados, colWidths=None):
@@ -48,14 +99,14 @@ def _tabela_dados(dados, colWidths=None):
     ]))
     return t
 
-def gerar_pdf(analise, caminho="relatorio_olho_deus.pdf"):
+def gerar_pdf(analise, caminho="relatorio_graos_de_ouro.pdf"):
     doc = SimpleDocTemplate(caminho, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
     estilos = getSampleStyleSheet()
     corpo = ParagraphStyle('C', parent=estilos['Normal'], fontSize=11, leading=16)
     destaque = ParagraphStyle('D', parent=corpo, fontSize=13, textColor=COR_AZUL_ESCURO)
     subtitulo = ParagraphStyle('S', parent=estilos['Heading2'], fontSize=14, textColor=COR_AZUL_MEDIO, spaceAfter=10)
     c = []
-    c.append(Paragraph("OLHO DE DEUS", ParagraphStyle('T', parent=estilos['Title'], fontSize=22, textColor=COR_AZUL_ESCURO)))
+    c.append(Paragraph("GRAOS DE OURO", ParagraphStyle('T', parent=estilos['Title'], fontSize=22, textColor=COR_AZUL_ESCURO)))
     c.append(Paragraph("Relatorio de Analise Mineral Preliminar", subtitulo))
     c.append(Paragraph(f"<b>Data:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", corpo))
     c.append(Spacer(1, 0.5*cm))
@@ -69,16 +120,23 @@ def gerar_pdf(analise, caminho="relatorio_olho_deus.pdf"):
     dados = [["Indicador", "Valor"], ["Score Final", f"{analise['score_final']}/100"], ["Classificacao", analise["classificacao"]], ["Tipo Principal", icone], ["Score OURO", f"{analise['score_ouro']}/100"], ["Score TERRAS RARAS", f"{analise['score_etr']}/100"]]
     c.append(_tabela_dados(dados))
     c.append(Spacer(1, 0.5*cm))
+
+    # MAPA COM MARCADORES
     try:
-        caminho_mapa = gerar_mapa_estatico(coord["lat"], coord["lng"])
+        caminho_mapa = gerar_mapa_com_marcadores(
+            coord["lat"], coord["lng"],
+            analise.get("pontos_proximos"),
+            analise.get("pontos_sigmine")
+        )
         if caminho_mapa and os.path.exists(caminho_mapa):
-            c.append(Paragraph("<b>Mapa da Regiao Analisada</b>", destaque))
+            c.append(Paragraph("<b>Mapa com Pontos de Interesse</b>", destaque))
+            c.append(Paragraph("<i>Azul: ponto analisado | Laranja: ouro | Ciano: ETR | Verde: SIGMINE</i>", corpo))
             c.append(Spacer(1, 0.3*cm))
-            img = RLImage(caminho_mapa, width=16*cm, height=10*cm)
-            c.append(img)
+            c.append(RLImage(caminho_mapa, width=16*cm, height=10*cm))
             c.append(Spacer(1, 0.5*cm))
     except Exception as e:
-        print(f"Erro ao inserir mapa: {e}")
+        print(f"Erro mapa: {e}")
+
     if analise.get("pontos_proximos"):
         c.append(Paragraph("<b>3. Ocorrencias Minerais no Raio de 15 km</b>", destaque))
         dp = [["Nome", "Tipo", "Distancia", "Acesso"]]
@@ -88,26 +146,54 @@ def gerar_pdf(analise, caminho="relatorio_olho_deus.pdf"):
             dp.append([p["nome"], tipo_str, dist_str, p["facilidade"]])
         c.append(_tabela_dados(dp, colWidths=[6*cm, 3*cm, 3.5*cm, 3.5*cm]))
         c.append(Spacer(1, 0.5*cm))
+
+    # LISTA SIGMINE
+    if analise.get("pontos_sigmine"):
+        c.append(Paragraph("<b>4. Processos Minerarios (SIGMINE) no Raio de 15 km</b>", destaque))
+        c.append(Spacer(1, 0.2*cm))
+        dados_sig = [["Processo", "Substancia", "Fase", "Distancia (km)"]]
+        for p in analise["pontos_sigmine"][:15]:
+            dados_sig.append([
+                str(p.get("processo", "-"))[:20],
+                str(p.get("subs", "-"))[:20],
+                str(p.get("fase", "-"))[:25],
+                str(p.get("distancia_km", "-"))
+            ])
+        c.append(_tabela_dados(dados_sig, colWidths=[4*cm, 4*cm, 5*cm, 3*cm]))
+        c.append(Spacer(1, 0.5*cm))
+
     if analise.get("evidencias_ouro"):
-        c.append(Paragraph("<b>4. Evidencias para OURO</b>", destaque))
+        c.append(Paragraph("<b>5. Evidencias para OURO</b>", destaque))
         for e in analise["evidencias_ouro"]: c.append(Paragraph(f"- {e}", corpo))
         c.append(Spacer(1, 0.3*cm))
     if analise.get("evidencias_etr"):
-        c.append(Paragraph("<b>5. Evidencias para TERRAS RARAS</b>", destaque))
+        c.append(Paragraph("<b>6. Evidencias para TERRAS RARAS</b>", destaque))
         for e in analise["evidencias_etr"]: c.append(Paragraph(f"- {e}", corpo))
         c.append(Spacer(1, 0.3*cm))
     if analise.get("dados_satelite"):
         ds = analise["dados_satelite"]
-        c.append(Paragraph("<b>6. Indices Espectrais (Satelite)</b>", destaque))
+        c.append(Paragraph("<b>7. Indices Espectrais (Satelite)</b>", destaque))
         dados_sat = [["Indice", "Valor"], ["Oxido de Ferro", str(ds.get("oxido_ferro", 0))], ["Carbonato/Argila", str(ds.get("carbonato_argila", 0))], ["Anomalia Radioativa", str(ds.get("anomalia_radioativa", 0))], ["Data da Imagem", ds.get("data_imagem", "-")], ["Resolucao", ds.get("resolucao", "-")]]
         c.append(_tabela_dados(dados_sat))
         c.append(Spacer(1, 0.5*cm))
+
+    # QR CODE
+    try:
+        caminho_qr = gerar_qr_code(coord["lat"], coord["lng"])
+        if caminho_qr and os.path.exists(caminho_qr):
+            c.append(Paragraph("<b>8. Escaneie para abrir no Google Earth:</b>", destaque))
+            c.append(Spacer(1, 0.2*cm))
+            c.append(RLImage(caminho_qr, width=4*cm, height=4*cm))
+            c.append(Spacer(1, 0.5*cm))
+    except Exception as e:
+        print(f"Erro QR: {e}")
+
     c.append(PageBreak())
-    c.append(Paragraph("7. Proximos Passos Recomendados", subtitulo))
+    c.append(Paragraph("9. Proximos Passos Recomendados", subtitulo))
     passos = ["1. Verificar no SIGMINE se a area esta livre.", "2. Confirmar tipo de rocha no GeoSGB.", "3. Se aluviao: detector de metais nas margens de rios.", "4. Se rocha dura: amostragem sistematica.", "5. Enviar amostras para laboratorio (Au e ETR).", "6. Contratar engenheiro de minas para o REPEM.", "7. Emitir ART no CREA.", "8. Pagar emolumentos e protocolar no REPEM."]
     for p in passos: c.append(Paragraph(p, corpo)); c.append(Spacer(1, 0.15*cm))
     c.append(Spacer(1, 1*cm))
-    c.append(Paragraph("8. Assinaturas", subtitulo))
+    c.append(Paragraph("10. Assinaturas", subtitulo))
     ass = [["Tecnico Responsavel", "Solicitante"], ["\n\n\n_________________________", "\n\n\n_________________________"], ["Nome: ____________________", "Nome: ____________________"], ["CREA: ____________________", "CPF: _____________________"], ["ART: _____________________", "Data: ____________________"]]
     ta = Table(ass, colWidths=[8*cm, 8*cm])
     ta.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('FONTSIZE', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'TOP')]))
@@ -139,7 +225,6 @@ def gerar_memorial(analise, caminho="memorial_descritivo.pdf", dados_solicitante
     c.append(_tabela_dados(dados_imovel, colWidths=[6*cm, 10*cm]))
     c.append(PageBreak())
     c.append(Paragraph("<b>3. CARACTERIZACAO DA AREA</b>", destaque))
-    c.append(Paragraph("A area requerida esta localizada na regiao de coordenadas acima, apresentando as seguintes caracteristicas:", corpo))
     fisio = [["Aspecto", "Descricao"], ["Relevo", "____________________________________________"], ["Vegetacao predominante", "____________________________________________"], ["Clima", "____________________________________________"], ["Hidrografia", "____________________________________________"], ["Acesso a area", "____________________________________________"]]
     c.append(_tabela_dados(fisio, colWidths=[5*cm, 11*cm]))
     c.append(Spacer(1, 0.5*cm))
@@ -147,32 +232,18 @@ def gerar_memorial(analise, caminho="memorial_descritivo.pdf", dados_solicitante
     c.append(Paragraph("<b>4. GEOLOGIA REGIONAL</b>", destaque))
     geologia = [["Parametro", "Resultado"], ["Score de potencial", f"{analise['score_final']}/100"], ["Classificacao", analise["classificacao"]], ["Tipo principal", icone], ["Score Ouro", f"{analise['score_ouro']}/100"], ["Score Terras Raras", f"{analise['score_etr']}/100"]]
     c.append(_tabela_dados(geologia, colWidths=[6*cm, 10*cm]))
-    c.append(Spacer(1, 0.5*cm))
-    if analise.get("pontos_proximos"):
-        c.append(Paragraph("<b>5. OCORRENCIAS MINERAIS PROXIMAS</b>", destaque))
-        dp = [["Nome", "Tipo", "Distancia", "Acesso"]]
-        for p in analise["pontos_proximos"][:15]:
-            tipo_str = "Ouro" if p["tipo"] == "ouro" else "ETR"
-            dist_str = "DENTRO" if p["dentro"] else f"{p['distancia_km']} km"
-            dp.append([p["nome"], tipo_str, dist_str, p["facilidade"]])
-        c.append(_tabela_dados(dp, colWidths=[5*cm, 3*cm, 4*cm, 4*cm]))
-        c.append(Spacer(1, 0.5*cm))
     c.append(PageBreak())
-    c.append(Paragraph("<b>6. METODOLOGIA APLICADA</b>", destaque))
-    metodologia = ["1. Obtencao de imagens de satelite da NASA GIBS (MODIS Terra TrueColor, 250m).", "2. Processamento digital para extracao de indices espectrais.", "3. Calculo do indice de oxido de ferro (pista para ouro).", "4. Calculo do indice de carbonato/argila (pista para Terras Raras).", "5. Analise de anomalia radioativa.", "6. Cruzamento com banco de 24 regioes minerais conhecidas.", "7. Cruzamento com dados do SIGMINE/ANM.", "8. Classificacao final do potencial mineral."]
-    for m in metodologia: c.append(Paragraph(m, corpo)); c.append(Spacer(1, 0.15*cm))
-    c.append(Spacer(1, 0.5*cm))
-    c.append(Paragraph("<b>7. CONCLUSAO</b>", destaque))
-    conclusao = f"Com base na analise realizada, a area requerida apresenta <b>{analise['classificacao']}</b> para ocorrencia de <b>{icone}</b>, com score final de <b>{analise['score_final']}/100</b>.<br/><br/>Recomenda-se a realizacao de trabalhos de campo complementares."
+    c.append(Paragraph("<b>5. CONCLUSAO</b>", destaque))
+    conclusao = f"Com base na analise realizada, a area requerida apresenta <b>{analise['classificacao']}</b> para ocorrencia de <b>{icone}</b>, com score final de <b>{analise['score_final']}/100</b>."
     c.append(Paragraph(conclusao, corpo))
     c.append(Spacer(1, 1*cm))
-    c.append(Paragraph("<b>8. ASSINATURAS</b>", destaque))
+    c.append(Paragraph("<b>6. ASSINATURAS</b>", destaque))
     c.append(Spacer(1, 1.5*cm))
     ass = [["_________________________________", "_________________________________"], ["Requerente", "Tecnico Responsavel"], ["Nome: _________________________", "Nome: _________________________"], ["CPF/CNPJ: _____________________", "CREA: _________________________"], ["", "ART: __________________________"]]
     ta = Table(ass, colWidths=[8*cm, 8*cm])
     ta.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('FONTSIZE', (0,0), (-1,-1), 10), ('VALIGN', (0,0), (-1,-1), 'TOP')]))
     c.append(ta)
     c.append(Spacer(1, 1*cm))
-    c.append(Paragraph("<i>Este memorial descritivo e um documento preliminar. Nao substitui a analise tecnica de um engenheiro de minas registrado no CREA.</i>", corpo))
+    c.append(Paragraph("<i>Este memorial descritivo e um documento preliminar.</i>", corpo))
     doc.build(c)
     return caminho

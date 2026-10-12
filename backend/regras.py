@@ -1,8 +1,32 @@
-"""Motor de Regras - Olho de Deus"""
+"""Motor de Regras - Grãos de Ouro"""
 import math
 import json
 import os
+import time
 
+# =========================================================
+# PERFORMANCE: CACHE + ÍNDICE ESPACIAL (GRADE)
+# =========================================================
+_CACHE_ANALISES = {}
+_CACHE_MAX = 500
+_CACHE_TTL = 3600
+
+def _chave_cache(lat, lng):
+    return (round(lat, 3), round(lng, 3))
+
+def _salvar_cache(lat, lng, resultado):
+    _CACHE_ANALISES[_chave_cache(lat, lng)] = (resultado, time.time())
+    if len(_CACHE_ANALISES) > _CACHE_MAX:
+        mais_antigo = min(_CACHE_ANALISES, key=lambda k: _CACHE_ANALISES[k][1])
+        del _CACHE_ANALISES[mais_antigo]
+
+def _buscar_cache(lat, lng):
+    entrada = _CACHE_ANALISES.get(_chave_cache(lat, lng))
+    if entrada and (time.time() - entrada[1] < _CACHE_TTL):
+        return entrada[0]
+    return None
+
+# === CARREGAMENTO DO SIGMINE ===
 DADOS_SIGMINE = []
 _caminho_json = os.path.join(os.path.dirname(__file__), "dados_sigmine.json")
 if os.path.exists(_caminho_json):
@@ -13,6 +37,34 @@ if os.path.exists(_caminho_json):
     except Exception as _e:
         print(f"[regras] Erro ao carregar SIGMINE: {_e}")
 
+# === ÍNDICE ESPACIAL (GRADE) ===
+_GRADE_ESPACIAL = {}
+_TAMANHO_CELULA = 1.0
+
+def _celula(lat, lng):
+    return (int(lat // _TAMANHO_CELULA), int(lng // _TAMANHO_CELULA))
+
+if DADOS_SIGMINE:
+    for _reg in DADOS_SIGMINE:
+        try:
+            _lat = float(_reg["lat"]); _lng = float(_reg["lng"])
+            _c = _celula(_lat, _lng)
+            _GRADE_ESPACIAL.setdefault(_c, []).append(_reg)
+        except Exception:
+            pass
+    print(f"[regras] Indice espacial: {len(_GRADE_ESPACIAL)} celulas")
+
+def _candidatos_espacial(lat, lng, raio_celulas=1):
+    lat_c, lng_c = _celula(lat, lng)
+    resultado = []
+    for d_lat in range(-raio_celulas, raio_celulas + 1):
+        for d_lng in range(-raio_celulas, raio_celulas + 1):
+            resultado.extend(_GRADE_ESPACIAL.get((lat_c + d_lat, lng_c + d_lng), []))
+    return resultado
+
+# =========================================================
+# 39 REGIÕES CONHECIDAS (24 originais + 15 novas)
+# =========================================================
 REGIOES = [
     {"nome": "Serra dos Carajas", "lat": -6.0, "lng": -50.0, "raio": 2.0, "tipo": "ouro", "facilidade": "media"},
     {"nome": "Cumaru", "lat": -6.5, "lng": -50.5, "raio": 1.0, "tipo": "ouro", "facilidade": "facil"},
@@ -38,6 +90,22 @@ REGIOES = [
     {"nome": "Catalao", "lat": -18.1, "lng": -47.9, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
     {"nome": "Salitre", "lat": -19.0, "lng": -46.8, "raio": 0.5, "tipo": "ETR", "facilidade": "media"},
     {"nome": "Serra Negra", "lat": -8.1, "lng": -38.0, "raio": 0.8, "tipo": "ETR", "facilidade": "dificil"},
+    # === 15 NOVAS REGIÕES ===
+    {"nome": "Vale do Ribeira", "lat": -24.5, "lng": -48.0, "raio": 1.0, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Pilar de Goias", "lat": -14.5, "lng": -49.5, "raio": 0.8, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Mara Rosa", "lat": -14.0, "lng": -49.2, "raio": 0.7, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Ponte Branca", "lat": -16.5, "lng": -52.5, "raio": 0.8, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Roncador", "lat": -14.8, "lng": -50.3, "raio": 0.7, "tipo": "ouro", "facilidade": "facil"},
+    {"nome": "Serra Leste", "lat": -6.2, "lng": -50.5, "raio": 0.6, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Sossego", "lat": -6.4, "lng": -50.2, "raio": 0.5, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Salobo", "lat": -5.8, "lng": -50.4, "raio": 0.6, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Cristalino", "lat": -6.9, "lng": -50.6, "raio": 0.5, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Andorinhas", "lat": -6.3, "lng": -50.3, "raio": 0.5, "tipo": "ouro", "facilidade": "media"},
+    {"nome": "Tapira", "lat": -19.9, "lng": -46.8, "raio": 0.7, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Serra do Salitre", "lat": -19.1, "lng": -46.6, "raio": 0.6, "tipo": "ETR", "facilidade": "dificil"},
+    {"nome": "Patos de Minas", "lat": -18.6, "lng": -46.5, "raio": 0.8, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Morro Azul", "lat": -21.5, "lng": -46.0, "raio": 0.6, "tipo": "ETR", "facilidade": "media"},
+    {"nome": "Serra do Navio", "lat": 0.9, "lng": -52.0, "raio": 1.0, "tipo": "ETR", "facilidade": "media"},
 ]
 
 def calcular_distancia_km(lat1, lng1, lat2, lng2):
@@ -48,6 +116,12 @@ def calcular_distancia_km(lat1, lng1, lat2, lng2):
     return R * 2 * math.asin(math.sqrt(a))
 
 def calcular_score(lat, lng, dados_satelite=None):
+    # VERIFICAR CACHE
+    if dados_satelite is None:
+        _cache_hit = _buscar_cache(lat, lng)
+        if _cache_hit is not None:
+            return _cache_hit
+
     score_ouro = 0
     score_etr = 0
     evidencias_ouro = []
@@ -95,8 +169,9 @@ def calcular_score(lat, lng, dados_satelite=None):
             score_etr += 20
             evidencias_etr.append(f"Anomalia radioativa detectada ({th:.2f}): +20 pts")
 
+    # BUSCA NO SIGMINE (usando índice espacial)
     pontos_sigmine = []
-    for s in DADOS_SIGMINE:
+    for s in _candidatos_espacial(lat, lng):
         try:
             dist_s = calcular_distancia_km(lat, lng, float(s["lat"]), float(s["lng"]))
             if dist_s <= 15:
@@ -129,7 +204,7 @@ def calcular_score(lat, lng, dados_satelite=None):
     score_final = max(score_ouro, score_etr)
     tipo_principal = "ouro" if score_ouro >= score_etr else "ETR"
 
-    return {
+    resultado_final = {
         "score_final": score_final,
         "classificacao": classificar(score_final),
         "tipo_principal": tipo_principal,
@@ -142,6 +217,8 @@ def calcular_score(lat, lng, dados_satelite=None):
         "coordenada": {"lat": lat, "lng": lng},
         "raio_analisado_km": 15
     }
+    _salvar_cache(lat, lng, resultado_final)
+    return resultado_final
 
 def calcular_simulacao_subsolo(resultado_analise, lat, lng):
     facilidade = "media"

@@ -1,4 +1,4 @@
-"""API Flask - Olho de Deus (completa)"""
+"""API Flask - Grãos de Ouro"""
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from regras import calcular_score, calcular_simulacao_subsolo
@@ -7,8 +7,22 @@ from pdf_generator import gerar_pdf, gerar_memorial
 import os
 import io
 
+try:
+    from flask_compress import Compress
+    COMPRESS_DISPONIVEL = True
+except ImportError:
+    COMPRESS_DISPONIVEL = False
+
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
+
+if COMPRESS_DISPONIVEL:
+    Compress(app)
+    print("[app] Compressao gzip ativada")
+
+@app.route('/api/health')
+def health():
+    return jsonify({"status": "ok", "app": "Graos de Ouro"})
 
 @app.route('/')
 def index():
@@ -43,9 +57,9 @@ def simular_subsolo():
 @app.route('/api/gerar-pdf', methods=['POST'])
 def gerar_pdf_endpoint():
     dados = request.get_json()
-    caminho = '/tmp/relatorio_olho_deus.pdf'
+    caminho = '/tmp/relatorio_graos_de_ouro.pdf'
     gerar_pdf(dados, caminho)
-    return send_file(caminho, as_attachment=True, download_name='relatorio_olho_deus.pdf', mimetype='application/pdf')
+    return send_file(caminho, as_attachment=True, download_name='relatorio_graos_de_ouro.pdf', mimetype='application/pdf')
 
 @app.route('/api/gerar-memorial', methods=['POST'])
 def gerar_memorial_endpoint():
@@ -60,13 +74,13 @@ def exportar_kml():
     coord = dados.get("coordenada", {})
     pontos = dados.get("pontos_proximos", []) + dados.get("pontos_sigmine", [])
     kml = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>\n'
-    kml += f'<name>Olho de Deus - {coord.get("lat")},{coord.get("lng")}</name>\n'
+    kml += f'<name>Graos de Ouro - {coord.get("lat")},{coord.get("lng")}</name>\n'
     kml += f'<Placemark><name>Ponto Analisado</name><Point><coordinates>{coord.get("lng")},{coord.get("lat")},0</coordinates></Point></Placemark>\n'
     for p in pontos:
         nome = p.get("nome") or p.get("processo", "Ponto")
         kml += f'<Placemark><name>{nome}</name><Point><coordinates>{p.get("lng")},{p.get("lat")},0</coordinates></Point></Placemark>\n'
     kml += '</Document>\n</kml>'
-    return send_file(io.BytesIO(kml.encode("utf-8")), as_attachment=True, download_name='olho_de_deus.kml', mimetype='application/vnd.google-earth.kml+xml')
+    return send_file(io.BytesIO(kml.encode("utf-8")), as_attachment=True, download_name='graos_de_ouro.kml', mimetype='application/vnd.google-earth.kml+xml')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

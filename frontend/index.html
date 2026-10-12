@@ -2,27 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OLHO DE DEUS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GRAOS DE OURO</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-:root { --cyan: #00f0ff; --blue: #0066ff; --dark: #05080f; --darker: #020408; --glass: rgba(10, 20, 35, 0.85); --border: rgba(0, 240, 255, 0.3); --green: #00ff88; --yellow: #ffcc00; --red: #ff3355; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Rajdhani', sans-serif; background: var(--darker); color: #fff; overflow: hidden; }
+:root { --cyan: #00f0ff; --blue: #0066ff; --dark: #05080f; --darker: #020408; --glass: rgba(10, 20, 35, 0.85); --border: rgba(0, 240, 255, 0.3); --green: #00ff88; --yellow: #ffcc00; --red: #ff3355; --orange: #ff6400; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Rajdhani', sans-serif; background: var(--darker); color: #fff; overflow: hidden; touch-action: manipulation; }
+body.modo-claro { --darker: #f0f0f0; --dark: #e0e0e0; --glass: rgba(255,255,255,0.9); color: #111; }
 #map { width: 100%; height: 100vh; z-index: 1; }
 .hud { position: fixed; top: 20px; left: 20px; z-index: 1000; background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 1px; }
 .hud .dot { display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 .panel { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; background: var(--glass); backdrop-filter: blur(20px); border-left: 1px solid var(--border); z-index: 1000; overflow-y: auto; padding: 25px; }
 .panel-header { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 20px; }
-.panel-header .logo { font-family: 'Orbitron'; font-size: 22px; font-weight: 900; color: var(--cyan); text-shadow: 0 0 20px var(--cyan); letter-spacing: 3px; }
+.panel-header .logo { font-family: 'Orbitron'; font-size: 22px; font-weight: 900; color: var(--yellow); text-shadow: 0 0 20px var(--yellow); letter-spacing: 3px; }
 .panel-header .subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
 .btn { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: rgba(0, 240, 255, 0.05); color: var(--cyan); font-family: 'Orbitron'; font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer; border-radius: 6px; transition: all 0.3s; }
 .btn:hover { background: rgba(0, 240, 255, 0.15); box-shadow: 0 0 20px rgba(0,240,255,0.4); }
 .btn.primary { background: rgba(0, 240, 255, 0.15); border-color: var(--cyan); }
 .btn.green { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
 .btn.yellow { background: rgba(255,204,0,0.1); border-color: var(--yellow); color: var(--yellow); }
+.btn.orange { background: rgba(255,100,0,0.15); border-color: var(--orange); color: var(--orange); }
 input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-family: 'Rajdhani'; font-size: 14px; outline: none; }
 .result { margin-top: 20px; display: none; }
 .score-display { text-align: center; padding: 20px; margin-bottom: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 1px solid var(--border); }
@@ -41,7 +43,24 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 .loading { display: none; text-align: center; padding: 20px; }
 .spinner { width: 40px; height: 40px; border: 3px solid rgba(0,240,255,0.1); border-top-color: var(--cyan); border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 768px) { .panel { width: 100%; height: 60vh; top: 40vh; border-left: none; border-top: 1px solid var(--border); } .hud { font-size: 9px; padding: 8px 12px; } }
+
+/* ===== ANDROID ADAPTATIVO ===== */
+@media (max-width: 768px) {
+    .panel { width: 100%; height: 55vh; top: 45vh; border-left: none; border-top: 2px solid var(--cyan); padding: 15px; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0, 240, 255, 0.2); }
+    .panel::before { content: ''; display: block; width: 50px; height: 4px; background: var(--cyan); border-radius: 2px; margin: 0 auto 12px; opacity: 0.5; }
+    .hud { top: 10px; left: 10px; padding: 8px 12px; font-size: 9px; }
+    .btn { padding: 14px; font-size: 12px; min-height: 48px; }
+    input { padding: 12px; font-size: 16px; min-height: 44px; }
+    .panel-header .logo { font-size: 16px; }
+    .score-display .value { font-size: 42px; }
+    .spinner { width: 50px; height: 50px; border-width: 4px; }
+}
+@media (max-width: 480px) {
+    .panel { height: 58vh; top: 42vh; padding: 12px; }
+    .btn { font-size: 11px; padding: 12px; }
+    .score-display .value { font-size: 36px; }
+}
+.leaflet-container { touch-action: pan-x pan-y; }
 </style>
 </head>
 <body>
@@ -49,7 +68,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 <div class="hud"><span class="dot"></span>SISTEMA ATIVO<div style="margin-top: 8px; color: var(--cyan);" id="hud-coord">LAT: -- | LNG: --</div></div>
 <div class="panel">
     <div class="panel-header">
-        <div class="logo">OLHO DE DEUS</div>
+        <div class="logo">GRAOS DE OURO</div>
         <div class="subtitle">Prospeccao Mineral - Ouro + Terras Raras</div>
     </div>
     <button class="btn" onclick="ativarGPS()">ATIVAR GPS EM TEMPO REAL</button>
@@ -57,6 +76,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
     <input type="number" id="lng" placeholder="Longitude" step="0.000001">
     <button class="btn primary" onclick="analisar()">ANALISAR POTENCIAL</button>
     <button class="btn" onclick="alternarMapa()">ALTERNAR MAPA (HIBRIDO/SATELITE)</button>
+    <button class="btn" onclick="toggleModo()">ALTERNAR MODO ESCURO/CLARO</button>
     <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px;">ANALISANDO...</div></div>
     <div class="result" id="result"></div>
 </div>
@@ -103,6 +123,12 @@ function alternarMapa() {
     }
 }
 
+function toggleModo() {
+    document.body.classList.toggle('modo-claro');
+    const modo = document.body.classList.contains('modo-claro') ? 'claro' : 'escuro';
+    localStorage.setItem('modo', modo);
+}
+
 function ativarGPS() {
     if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
     if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
@@ -114,17 +140,35 @@ function ativarGPS() {
     }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
-function analisar() {
+async function analisar() {
     const lat = parseFloat(document.getElementById('lat').value);
     const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas ou clique no mapa'); return; }
     document.getElementById('loading').style.display = 'block';
     document.getElementById('result').style.display = 'none';
-    fetch('/api/analisar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true}) })
-    .then(r => r.json()).then(dados => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    try {
+        const resposta = await fetch('/api/analisar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({lat: lat, lng: lng, usar_satelite: true}),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!resposta.ok) throw new Error('Erro ' + resposta.status);
+        const dados = await resposta.json();
         document.getElementById('loading').style.display = 'none';
         renderizarResultado(dados, lat, lng);
-    }).catch(e => { document.getElementById('loading').style.display = 'none'; alert('Erro: ' + e.message); });
+    } catch (e) {
+        clearTimeout(timeoutId);
+        document.getElementById('loading').style.display = 'none';
+        if (e.name === 'AbortError') {
+            alert('Analise demorou mais de 60s. O servidor pode estar acordando. Tente de novo.');
+        } else {
+            alert('Erro: ' + e.message);
+        }
+    }
 }
 
 function renderizarResultado(dados, lat, lng) {
@@ -143,6 +187,7 @@ function renderizarResultado(dados, lat, lng) {
     html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
     html += '<button class="btn" onclick="exportarKML()">EXPORTAR KML</button>';
     html += '<button class="btn" onclick="abrirGoogleEarth()">ABRIR NO GOOGLE EARTH</button>';
+    html += '<button class="btn orange" onclick="criarRota()">CRIAR ROTA ATE AQUI (GPS)</button>';
     r.innerHTML = html;
     r.style.display = 'block';
     window.ultimaAnalise = dados;
@@ -156,13 +201,13 @@ function renderizarResultado(dados, lat, lng) {
             let cor = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff';
             if (p.dentro) cor = '#ff3355';
             let ic = L.divIcon({ html: '<div style="background:' + cor + '; width:14px; height:14px; border-radius:50%; border:2px solid #fff;"></div>', className: '', iconSize: [14, 14] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>' + p.tipo.toUpperCase() + '<br>' + p.distancia_km + ' km');
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>' + p.tipo.toUpperCase() + '<br>' + p.distancia_km + ' km<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>');
         });
     }
     if (dados.pontos_sigmine) {
         dados.pontos_sigmine.slice(0, 20).forEach(p => {
             let ic = L.divIcon({ html: '<div style="background:#00ff88; width:10px; height:10px; border-radius:50%; border:1px solid #fff;"></div>', className: '', iconSize: [10, 10] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.processo + '</b><br>' + p.subs);
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.processo + '</b><br>' + p.subs + '<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>');
         });
     }
 }
@@ -170,7 +215,7 @@ function renderizarResultado(dados, lat, lng) {
 function gerarPDF() {
     if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
     fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
-    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_olho_deus.pdf'; a.click(); })
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_graos_de_ouro.pdf'; a.click(); })
     .catch(e => alert('Erro: ' + e.message));
 }
 
@@ -184,7 +229,7 @@ function gerarMemorial() {
 function exportarKML() {
     if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
     fetch('/api/exportar-kml', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
-    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'olho_de_deus.kml'; a.click(); })
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'graos_de_ouro.kml'; a.click(); })
     .catch(e => alert('Erro: ' + e.message));
 }
 
@@ -193,6 +238,51 @@ function abrirGoogleEarth() {
     const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Faca uma analise primeiro'); return; }
     window.open('https://earth.google.com/web/@' + lat + ',' + lng + ',1000a,1000d,35y,0h,0t,0r', '_blank');
+}
+
+function criarRota() {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lng = parseFloat(document.getElementById('lng').value);
+    if (isNaN(lat) || isNaN(lng)) { alert('Faca uma analise primeiro'); return; }
+    if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
+    document.getElementById('loading').style.display = 'block';
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        document.getElementById('loading').style.display = 'none';
+        const origemLat = pos.coords.latitude.toFixed(6);
+        const origemLng = pos.coords.longitude.toFixed(6);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let url;
+        if (isMobile) {
+            url = 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + lat + ',' + lng + '&travelmode=driving';
+        } else {
+            url = 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + lat + ',' + lng;
+        }
+        window.open(url, '_blank');
+    }, function(err) {
+        document.getElementById('loading').style.display = 'none';
+        alert('Erro GPS: ' + err.message);
+    }, { enableHighAccuracy: true, timeout: 15000 });
+}
+
+function rotaPontoEspecifico(destLat, destLng) {
+    if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
+    document.getElementById('loading').style.display = 'block';
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        document.getElementById('loading').style.display = 'none';
+        const origemLat = pos.coords.latitude.toFixed(6);
+        const origemLng = pos.coords.longitude.toFixed(6);
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let url;
+        if (isMobile) {
+            url = 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + destLat + ',' + destLng + '&travelmode=driving';
+        } else {
+            url = 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + destLat + ',' + destLng;
+        }
+        window.open(url, '_blank');
+    }, function(err) {
+        document.getElementById('loading').style.display = 'none';
+        alert('Erro GPS: ' + err.message);
+    }, { enableHighAccuracy: true, timeout: 15000 });
 }
 
 function abrirSimulacao3D() {
@@ -259,7 +349,12 @@ function montarBloco3D(dados) {
     animar();
 }
 
-window.onload = initMap;
+window.onload = function() {
+    initMap();
+    if (localStorage.getItem('modo') === 'claro') {
+        document.body.classList.add('modo-claro');
+    }
+};
 </script>
 </body>
 </html>

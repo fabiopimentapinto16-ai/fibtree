@@ -1,7 +1,9 @@
 flask
 flask-cors
+Flask-Compress
 requests
 Pillow
+qrcode[pil]
 numpy
 reportlab
 gunicorn
