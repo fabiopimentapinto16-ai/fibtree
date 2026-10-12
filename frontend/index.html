@@ -131,14 +131,50 @@ function toggleModo() {
 }
 
 function ativarGPS() {
-    if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
-    if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+    if (!navigator.geolocation) { alert('GPS nao suportado pelo navegador'); return; }
+    
+    if (gpsWatchId) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+    }
+    
+    // Feedback visual
+    document.getElementById('hud-coord').innerText = 'Buscando GPS...';
+    
     gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
-        const lat = pos.coords.latitude.toFixed(6); const lng = pos.coords.longitude.toFixed(6);
-        document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        
+        // 1. Preencher os inputs
+        document.getElementById('lat').value = lat;
+        document.getElementById('lng').value = lng;
+        
+        // 2. Atualizar o HUD
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        // NÃO chama analisar() automaticamente.
-    }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
+        
+        // 3. === MOVER O MAPA ATE A POSICAO (era isso que faltava!) ===
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lng);
+        
+        // Colocar/atualizar o marcador do GPS
+        if (window._gpsMarker) {
+            map.removeLayer(window._gpsMarker);
+        }
+        window._gpsMarker = L.marker([latNum, lngNum], {
+            icon: L.divIcon({
+                html: '<div style="background:#00ff88; width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 15px #00ff88; animation: pulse 1.5s infinite;"></div>',
+                className: '',
+                iconSize: [20, 20]
+            })
+        }).addTo(map).bindPopup('<b>Voce esta aqui</b>');
+        
+        // Centralizar o mapa (com animacao)
+        map.setView([latNum, lngNum], 14, { animate: true });
+        
+    }, function(err) {
+        document.getElementById('hud-coord').innerText = 'Erro GPS: ' + err.message;
+        alert('Erro ao acessar GPS: ' + err.message + '\n\nVerifique se a permissao de localizacao esta ativada no navegador.');
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
 async function analisar() {
