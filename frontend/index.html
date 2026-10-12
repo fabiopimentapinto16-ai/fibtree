@@ -97,6 +97,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 let map, marker, circle, gpsWatchId = null;
 let satLayer, hibridoLayer, camadaAtual = "hibrido";
 let cena3d, camera3d, renderizador3d, animacaoId;
+let analisandoEmAndamento = false;
 
 function initMap() {
     map = L.map('map').setView([-15, -50], 4);
@@ -111,7 +112,7 @@ function initMap() {
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        analisar();
+        // NÃO chama analisar() automaticamente. Usuário precisa clicar no botão.
     });
 }
 
@@ -136,18 +137,28 @@ function ativarGPS() {
         const lat = pos.coords.latitude.toFixed(6); const lng = pos.coords.longitude.toFixed(6);
         document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        analisar();
+        // NÃO chama analisar() automaticamente.
     }, function(err) { alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
 async function analisar() {
+    // === TRAVA: Se já está analisando, ignora ===
+    if (analisandoEmAndamento) {
+        console.log('Analise em andamento. Ignorando nova solicitacao.');
+        return;
+    }
+    
     const lat = parseFloat(document.getElementById('lat').value);
     const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas ou clique no mapa'); return; }
+    
+    analisandoEmAndamento = true;
     document.getElementById('loading').style.display = 'block';
     document.getElementById('result').style.display = 'none';
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
     try {
         const resposta = await fetch('/api/analisar', {
             method: 'POST',
@@ -168,6 +179,9 @@ async function analisar() {
         } else {
             alert('Erro: ' + e.message);
         }
+    } finally {
+        // === SEMPRE LIBERA A TRAVA, mesmo se der erro ===
+        analisandoEmAndamento = false;
     }
 }
 
