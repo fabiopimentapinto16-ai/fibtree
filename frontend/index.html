@@ -201,13 +201,25 @@ function renderizarResultado(dados, lat, lng) {
             let cor = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff';
             if (p.dentro) cor = '#ff3355';
             let ic = L.divIcon({ html: '<div style="background:' + cor + '; width:14px; height:14px; border-radius:50%; border:2px solid #fff;"></div>', className: '', iconSize: [14, 14] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>' + p.tipo.toUpperCase() + '<br>' + p.distancia_km + ' km<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>');
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup(
+                '<b>' + p.nome + '</b><br>' +
+                'Tipo: ' + p.tipo.toUpperCase() + '<br>' +
+                'Distancia: ' + p.distancia_km + ' km<br>' +
+                '<button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>'
+            );
         });
     }
     if (dados.pontos_sigmine) {
         dados.pontos_sigmine.slice(0, 20).forEach(p => {
             let ic = L.divIcon({ html: '<div style="background:#00ff88; width:10px; height:10px; border-radius:50%; border:1px solid #fff;"></div>', className: '', iconSize: [10, 10] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.processo + '</b><br>' + p.subs + '<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>');
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup(
+                '<b>Processo: ' + p.processo + '</b><br>' +
+                '<span style="color:#00ff88;font-weight:bold;">Substancia: ' + (p.subs || 'Nao informada') + '</span><br>' +
+                'Fase: ' + (p.fase || 'Nao informada') + '<br>' +
+                'Distancia: ' + p.distancia_km + ' km<br>' +
+                'UF: ' + (p.uf || '-') + '<br>' +
+                '<button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:8px;padding:8px 12px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px;">Criar Rota</button>'
+            );
         });
     }
 }
