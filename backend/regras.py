@@ -217,8 +217,93 @@ def calcular_score(lat, lng, dados_satelite=None):
         "coordenada": {"lat": lat, "lng": lng},
         "raio_analisado_km": 15
     }
+    resultado_final["ponto_interesse"] = calcular_ponto_interesse(lat, lng, resultado_final)
+    return resultado_final
+    # 
     _salvar_cache(lat, lng, resultado_final)
     return resultado_final
+
+
+
+def calcular_ponto_interesse(lat, lng, resultado_analise):
+    """
+    Calcula o ponto de maior potencial na região (centroide).
+    Retorna {lat, lng, score, motivo}.
+    """
+    if not resultado_analise:
+        return None
+    
+    # Pegar os pontos próximos (regiões conhecidas)
+    pontos_proximos = resultado_analise.get("pontos_proximos", [])
+    pontos_sigmine = resultado_analise.get("pontos_sigmine", [])
+    score_final = resultado_analise.get("score_final", 0)
+    tipo_principal = resultado_analise.get("tipo_principal", "ouro")
+    
+    # Estratégia: usar o ponto mais próximo com maior pontuação
+    candidatos = []
+    
+    # Adicionar regiões conhecidas
+    for p in pontos_proximos:
+        if p.get("tipo") == tipo_principal:
+            candidatos.append({
+                "lat": p["lat"],
+                "lng": p["lng"],
+                "nome": p["nome"],
+                "tipo": "regiao_conhecida",
+                "distancia": p["distancia_km"]
+            })
+    
+    # Adicionar processos SIGMINE do tipo principal
+    for s in pontos_sigmine:
+        subs = s.get("subs", "").upper()
+        if tipo_principal == "ouro" and "OURO" in subs:
+            candidatos.append({
+                "lat": s["lat"],
+                "lng": s["lng"],
+                "nome": f"Processo {s.get('processo', '')}",
+                "tipo": "processo_sigmine",
+                "distancia": s.get("distancia_km", 0)
+            })
+        elif tipo_principal == "ETR" and any(x in subs for x in ["TERRAS RARAS", "ETR", "LITIO", "NIOBIO"]):
+            candidatos.append({
+                "lat": s["lat"],
+                "lng": s["lng"],
+                "nome": f"Processo {s.get('processo', '')}",
+                "tipo": "processo_sigmine",
+                "distancia": s.get("distancia_km", 0)
+            })
+    
+    if not candidatos:
+        # Se não tem candidatos, o ponto de interesse é o próprio ponto analisado
+        return {
+            "lat": lat,
+            "lng": lng,
+            "score": score_final,
+            "motivo": "Ponto analisado (sem candidatos próximos)",
+            "tipo": tipo_principal
+        }
+    
+    # Escolher o candidato mais próximo (menor distância)
+    candidatos.sort(key=lambda x: x.get("distancia", 999))
+    melhor = candidatos[0]
+    
+    # Score ajustado: quanto mais perto, maior
+    distancia = melhor.get("distancia", 0)
+    if distancia < 1:
+        score_ponto = min(100, score_final + 20)
+    elif distancia < 3:
+        score_ponto = min(100, score_final + 10)
+    else:
+        score_ponto = score_final
+    
+    return {
+        "lat": melhor["lat"],
+        "lng": melhor["lng"],
+        "score": score_ponto,
+        "motivo": melhor["nome"],
+        "tipo": tipo_principal,
+        "distancia_km": distancia
+    }
 
 def calcular_simulacao_subsolo(resultado_analise, lat, lng):
     facilidade = "media"

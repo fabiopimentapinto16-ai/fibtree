@@ -238,6 +238,9 @@ function renderizarResultado(dados, lat, lng) {
     html += '<button class="btn" onclick="exportarKML()">EXPORTAR KML</button>';
     html += '<button class="btn" onclick="abrirGoogleEarth()">ABRIR NO GOOGLE EARTH</button>';
     html += '<button class="btn orange" onclick="criarRota()">CRIAR ROTA ATE AQUI (GPS)</button>';
+    if (dados.ponto_interesse) {
+        html += '<button class="btn" onclick="irParaPontoInteresse()" style="background: rgba(255,215,0,0.15); border-color: #FFD700; color: #FFD700;">IR AO PONTO DE INTERESSE (' + dados.ponto_interesse.score + '%)</button>';
+    }
     r.innerHTML = html;
     r.style.display = 'block';
     window.ultimaAnalise = dados;
@@ -272,6 +275,35 @@ function renderizarResultado(dados, lat, lng) {
             );
         });
     }
+
+    // === MARCADOR DO PONTO DE INTERESSE ===
+    if (dados.ponto_interesse) {
+        const pi = dados.ponto_interesse;
+        const corPI = pi.tipo === 'ouro' ? '#FFD700' : '#00FFFF';
+        const iconePI = L.divIcon({
+            html: '<div style="background:' + corPI + '; width:24px; height:24px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 20px ' + corPI + '; animation: pulse 1.5s infinite;"></div>',
+            className: '',
+            iconSize: [24, 24]
+        });
+        L.marker([pi.lat, pi.lng], {icon: iconePI}).addTo(map).bindPopup(
+            '<b style="color:' + corPI + ';">🎯 PONTO DE INTERESSE</b><br>' +
+            '<b>Score:</b> ' + pi.score + '%<br>' +
+            '<b>Motivo:</b> ' + pi.motivo + '<br>' +
+            '<b>Distância:</b> ' + (pi.distancia_km || 0) + ' km<br>' +
+            '<b>Coordenada:</b> ' + pi.lat.toFixed(6) + ', ' + pi.lng.toFixed(6) + '<br>' +
+            '<button onclick="rotaPontoEspecifico(' + pi.lat + ',' + pi.lng + ')" style="margin-top:8px;padding:8px 12px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>'
+        ).openPopup();
+    }
+
+}
+
+function irParaPontoInteresse() {
+    if (!window.ultimaAnalise || !window.ultimaAnalise.ponto_interesse) {
+        alert('Nenhum ponto de interesse calculado.');
+        return;
+    }
+    const pi = window.ultimaAnalise.ponto_interesse;
+    map.setView([pi.lat, pi.lng], 15);
 }
 
 function gerarPDF() {
