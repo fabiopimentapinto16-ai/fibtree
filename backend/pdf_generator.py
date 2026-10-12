@@ -22,6 +22,60 @@ COR_AZUL_MEDIO = HexColor('#088395')
 COR_CINZA_CLARO = HexColor('#f5f5f5')
 COR_BRANCO = HexColor('#ffffff')
 
+
+
+def gerar_mapa_com_ponto_interesse(lat, lng, ponto_interesse, pontos_sigmine=None, caminho="/tmp/mapa_pi.jpg", zoom=12):
+    """Gera mapa com o Ponto de Interesse destacado em dourado."""
+    try:
+        n = 2 ** zoom
+        x_tile = int((lng + 180.0) / 360.0 * n)
+        lat_rad = math.radians(lat)
+        y_tile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+        url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{y_tile}/{x_tile}"
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        img = Image.open(BytesIO(r.content)).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        w, h = img.size
+        
+        # Função auxiliar para converter lat/lng em pixel
+        fator = 256 * (2 ** zoom) / 360.0
+        def latlng_para_pixel(p_lat, p_lng):
+            px = (p_lng - lng) * fator + w/2
+            py = -(p_lat - lat) * fator + h/2
+            return (px, py)
+        
+        # Marcador do ponto analisado (azul)
+        px, py = latlng_para_pixel(lat, lng)
+        draw.ellipse([px-8, py-8, px+8, py+8], fill="blue", outline="white", width=2)
+        draw.text((px+12, py-10), "Ponto analisado", fill="white")
+        
+        # Marcador do Ponto de Interesse (dourado)
+        if ponto_interesse:
+            pi_lat = ponto_interesse.get("lat")
+            pi_lng = ponto_interesse.get("lng")
+            if pi_lat and pi_lng:
+                px_pi, py_pi = latlng_para_pixel(pi_lat, pi_lng)
+                cor_pi = "gold" if ponto_interesse.get("tipo") == "ouro" else "cyan"
+                draw.ellipse([px_pi-12, py_pi-12, px_pi+12, py_pi+12], fill=cor_pi, outline="white", width=3)
+                draw.text((px_pi+15, py_pi-10), "PONTO DE INTERESSE", fill="white")
+        
+        # Marcadores dos processos SIGMINE (verde)
+        if pontos_sigmine:
+            for p in pontos_sigmine[:20]:
+                try:
+                    px_s, py_s = latlng_para_pixel(p["lat"], p["lng"])
+                    if 0 <= px_s <= w and 0 <= py_s <= h:
+                        draw.ellipse([px_s-3, py_s-3, px_s+3, py_s+3], fill="green", outline="white", width=1)
+                except Exception:
+                    pass
+        
+        img.save(caminho, "JPEG", quality=85)
+        return caminho
+    except Exception as e:
+        print(f"Erro ao gerar mapa PI: {e}")
+        return None
+
 def gerar_mapa_com_marcadores(lat, lng, pontos_proximos=None, pontos_sigmine=None, caminho="/tmp/mapa_marcadores.jpg", zoom=11):
     """Baixa o tile do Esri e desenha circulos nos pontos de interesse."""
     try:
@@ -187,6 +241,58 @@ def gerar_pdf(analise, caminho="relatorio_graos_de_ouro.pdf"):
             c.append(Spacer(1, 0.5*cm))
     except Exception as e:
         print(f"Erro QR: {e}")
+
+
+    # === PONTO DE INTERESSE ===
+    if analise.get("ponto_interesse"):
+        pi = analise["ponto_interesse"]
+        c.append(PageBreak())
+        c.append(Paragraph("PONTO DE INTERESSE CALCULADO", ParagraphStyle('T2', parent=estilos['Title'], fontSize=18, textColor=HexColor('#b8860b'))))
+        c.append(Paragraph("Local de maior potencial identificado pela analise", subtitulo))
+        c.append(Spacer(1, 0.5*cm))
+        
+        # Mapa com o Ponto de Interesse
+        try:
+            caminho_mapa_pi = gerar_mapa_com_ponto_interesse(
+                coord["lat"], coord["lng"],
+                pi,
+                analise.get("pontos_sigmine")
+            )
+            if caminho_mapa_pi and os.path.exists(caminho_mapa_pi):
+                c.append(Paragraph("<b>Mapa com Ponto de Interesse Destacado</b>", destaque))
+                c.append(Paragraph("<i>Azul: ponto analisado | Dourado: ponto de interesse | Verde: SIGMINE</i>", corpo))
+                c.append(Spacer(1, 0.3*cm))
+                c.append(RLImage(caminho_mapa_pi, width=16*cm, height=10*cm))
+                c.append(Spacer(1, 0.5*cm))
+        except Exception as e:
+            print(f"Erro mapa PI: {e}")
+        
+        # Tabela com as informações do Ponto de Interesse
+        dados_pi = [
+            ["Parametro", "Valor"],
+            ["Coordenada", f"Lat: {pi['lat']:.6f} | Lng: {pi['lng']:.6f}"],
+            ["Score no Ponto", f"{pi.get('score', 0)}/100"],
+            ["Tipo Principal", pi.get('tipo', 'ouro').upper()],
+            ["Motivo", pi.get('motivo', 'Nao informado')],
+            ["Distancia do ponto analisado", f"{pi.get('distancia_km', 0)} km"],
+        ]
+        c.append(_tabela_dados(dados_pi, colWidths=[6*cm, 10*cm]))
+        c.append(Spacer(1, 0.5*cm))
+        
+        # Aviso e instruções
+        c.append(Paragraph("<b>Como usar este ponto:</b>", destaque))
+        instrucoes = [
+            "1. Este e o local de MAIOR POTENCIAL identificado pela analise.",
+            "2. Use as coordenadas acima para navegar ate o local (GPS).",
+            "3. Verifique no SIGMINE se a area esta livre para requerimento.",
+            "4. Confirme o tipo de rocha no GeoSGB.",
+            "5. Faca amostragem no local para confirmar a existencia de minerio.",
+            "6. Se confirmado, protocole o requerimento no REPEM/ANM.",
+        ]
+        for inst in instrucoes:
+            c.append(Paragraph(inst, corpo))
+            c.append(Spacer(1, 0.15*cm))
+        c.append(Spacer(1, 0.5*cm))
 
     c.append(PageBreak())
     c.append(Paragraph("9. Proximos Passos Recomendados", subtitulo))
