@@ -71,7 +71,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
         <div class="logo">GRAOS DE OURO</div>
         <div class="subtitle">Prospeccao Mineral - Ouro + Terras Raras</div>
     </div>
-    <button class="btn" onclick="ativarGPS()">ATIVAR GPS EM TEMPO REAL</button>
+    <button class="btn" onclick="ativarGPS()">ATIVAR/PARAR GPS</button>
     <input type="number" id="lat" placeholder="Latitude" step="0.000001">
     <input type="number" id="lng" placeholder="Longitude" step="0.000001">
     <button class="btn primary" onclick="analisar()">ANALISAR POTENCIAL</button>
@@ -98,6 +98,9 @@ let map, marker, circle, gpsWatchId = null;
 let satLayer, hibridoLayer, camadaAtual = "hibrido";
 let cena3d, camera3d, renderizador3d, animacaoId;
 let analisandoEmAndamento = false;
+let primeiraPosicaoGPS = true;
+let gpsMarker = null;
+let gpsAtivo = false;
 
 function initMap() {
     map = L.map('map').setView([-15, -50], 4);
@@ -131,50 +134,66 @@ function toggleModo() {
 }
 
 function ativarGPS() {
-    if (!navigator.geolocation) { alert('GPS nao suportado pelo navegador'); return; }
+    if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
     
-    if (gpsWatchId) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
+    // Se já está ativo, desativar
+    if (gpsAtivo) {
+        pararGPS();
+        return;
     }
     
-    // Feedback visual
-    document.getElementById('hud-coord').innerText = 'Buscando GPS...';
+    gpsAtivo = true;
+    primeiraPosicaoGPS = true;
     
     gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
         
-        // 1. Preencher os inputs
+        // Atualizar campos e HUD (SEMPRE)
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
-        
-        // 2. Atualizar o HUD
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
         
-        // 3. === MOVER O MAPA ATE A POSICAO (era isso que faltava!) ===
-        const latNum = parseFloat(lat);
-        const lngNum = parseFloat(lng);
-        
-        // Colocar/atualizar o marcador do GPS
-        if (window._gpsMarker) {
-            map.removeLayer(window._gpsMarker);
+        // Atualizar marcador verde (SEMPRE)
+        if (gpsMarker) {
+            map.removeLayer(gpsMarker);
         }
-        window._gpsMarker = L.marker([latNum, lngNum], {
-            icon: L.divIcon({
-                html: '<div style="background:#00ff88; width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 15px #00ff88; animation: pulse 1.5s infinite;"></div>',
-                className: '',
-                iconSize: [20, 20]
-            })
-        }).addTo(map).bindPopup('<b>Voce esta aqui</b>');
+        const iconeGPS = L.divIcon({
+            html: '<div style="background:#00ff88; width:18px; height:18px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 20px #00ff88;"></div>',
+            className: '',
+            iconSize: [18, 18]
+        });
+        gpsMarker = L.marker([lat, lng], {icon: iconeGPS}).addTo(map);
+        gpsMarker.bindPopup('<b>Sua localizacao</b><br>' + lat + ', ' + lng);
         
-        // Centralizar o mapa (com animacao)
-        map.setView([latNum, lngNum], 14, { animate: true });
+        // CENTRALIZAR O MAPA APENAS NA PRIMEIRA POSIÇÃO
+        if (primeiraPosicaoGPS) {
+            map.setView([lat, lng], 15);
+            primeiraPosicaoGPS = false;
+            console.log('📡 Primeira posição: mapa centralizado');
+            alert('GPS ativado! O mapa foi centralizado na sua posição.
+
+Agora você pode mover o mapa livremente.');
+        }
+        // Depois da primeira vez, NÃO mexe no mapa
         
     }, function(err) {
-        document.getElementById('hud-coord').innerText = 'Erro GPS: ' + err.message;
-        alert('Erro ao acessar GPS: ' + err.message + '\n\nVerifique se a permissao de localizacao esta ativada no navegador.');
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        gpsAtivo = false;
+        alert('Erro GPS: ' + err.message);
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+}
+
+function pararGPS() {
+    if (gpsWatchId) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+    }
+    if (gpsMarker) {
+        map.removeLayer(gpsMarker);
+        gpsMarker = null;
+    }
+    gpsAtivo = false;
+    alert('GPS desativado. Voce pode mover o mapa livremente.');
 }
 
 async function analisar() {
