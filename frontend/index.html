@@ -71,7 +71,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
         <div class="logo">GRAOS DE OURO</div>
         <div class="subtitle">Prospeccao Mineral - Ouro + Terras Raras</div>
     </div>
-    <button class="btn" onclick="ativarGPS()">ATIVAR/PARAR GPS</button>
+    <button class="btn" onclick="ativarGPS()">ATIVAR GPS EM TEMPO REAL</button>
     <input type="number" id="lat" placeholder="Latitude" step="0.000001">
     <input type="number" id="lng" placeholder="Longitude" step="0.000001">
     <button class="btn primary" onclick="analisar()">ANALISAR POTENCIAL</button>
@@ -98,9 +98,6 @@ let map, marker, circle, gpsWatchId = null;
 let satLayer, hibridoLayer, camadaAtual = "hibrido";
 let cena3d, camera3d, renderizador3d, animacaoId;
 let analisandoEmAndamento = false;
-let primeiraPosicaoGPS = true;
-let gpsMarker = null;
-let gpsAtivo = false;
 
 function initMap() {
     map = L.map('map').setView([-15, -50], 4);
@@ -134,47 +131,7 @@ function toggleModo() {
 }
 
 function ativarGPS() {
-    if (!navigator.geolocation) { alert('GPS nao suportado'); return; }
-    if (gpsAtivo) { pararGPS(); return; }
-    gpsAtivo = true;
-    primeiraPosicaoGPS = true;
-    gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lng = pos.coords.longitude.toFixed(6);
-        document.getElementById('lat').value = lat;
-        document.getElementById('lng').value = lng;
-        document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        if (gpsMarker) { map.removeLayer(gpsMarker); }
-        const iconeGPS = L.divIcon({
-            html: '<div style="background:#00ff88; width:18px; height:18px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 20px #00ff88;"></div>',
-            className: '',
-            iconSize: [18, 18]
-        });
-        gpsMarker = L.marker([lat, lng], {icon: iconeGPS}).addTo(map);
-        gpsMarker.bindPopup('<b>Sua localizacao</b><br>' + lat + ', ' + lng);
-        if (primeiraPosicaoGPS) {
-            map.setView([lat, lng], 15);
-            primeiraPosicaoGPS = false;
-            console.log('Primeira posicao: mapa centralizado');
-        }
-    }, function(err) {
-        gpsAtivo = false;
-        alert('Erro GPS: ' + err.message);
-    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-}
-
-function pararGPS() {
-    if (gpsWatchId) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-    }
-    if (gpsMarker) {
-        map.removeLayer(gpsMarker);
-        gpsMarker = null;
-    }
-    gpsAtivo = false;
-    alert('GPS desativado.');
-}
+    if (!navigator.geolocation) { alert('GPS nao suportado pelo navegador'); return; }
     
     if (gpsWatchId) {
         navigator.geolocation.clearWatch(gpsWatchId);
