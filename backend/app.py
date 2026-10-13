@@ -74,37 +74,37 @@ def exportar_kml():
     coord = dados.get("coordenada", {})
     pontos_proximos = dados.get("pontos_proximos", [])
     pontos_sigmine = dados.get("pontos_sigmine", [])
-    
+
     lat_central = coord.get("lat", 0)
     lng_central = coord.get("lng", 0)
-    
+
     kml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n'
     kml += '<Document>\n'
     kml += '<name>Graos de Ouro - Analise Mineral</name>\n'
     kml += f'<description>Ponto analisado: {lat_central:.6f}, {lng_central:.6f}</description>\n'
-    
+
     # Estilos personalizados
     kml += '<Style id="pontoAnalisado">\n'
     kml += '<IconStyle><color>ff0000ff</color><scale>1.5</scale>'
     kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/blu-circle.png</href></Icon>'
     kml += '</IconStyle></Style>\n'
-    
+
     kml += '<Style id="pontoOuro">\n'
     kml += '<IconStyle><color>ff00d7ff</color><scale>1.2</scale>'
     kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/ylw-circle.png</href></Icon>'
     kml += '</IconStyle></Style>\n'
-    
+
     kml += '<Style id="pontoETR">\n'
     kml += '<IconStyle><color>ffffd700</color><scale>1.2</scale>'
     kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon>'
     kml += '</IconStyle></Style>\n'
-    
+
     kml += '<Style id="pontoSigmine">\n'
     kml += '<IconStyle><color>ff00ff00</color><scale>1.0</scale>'
     kml += '<Icon><href>http://maps.google.com/mapfiles/kml/paddle/grn-circle.png</href></Icon>'
     kml += '</IconStyle></Style>\n'
-    
+
     # Ponto analisado
     kml += '<Placemark>\n'
     kml += '<name>PONTO ANALISADO</name>\n'
@@ -112,7 +112,7 @@ def exportar_kml():
     kml += '<styleUrl>#pontoAnalisado</styleUrl>\n'
     kml += f'<Point><coordinates>{lng_central},{lat_central},0</coordinates></Point>\n'
     kml += '</Placemark>\n'
-    
+
     # Regiões conhecidas
     for p in pontos_proximos:
         tipo = p.get("tipo", "ouro")
@@ -124,7 +124,7 @@ def exportar_kml():
         kml += f'<styleUrl>{estilo}</styleUrl>\n'
         kml += f'<Point><coordinates>{p.get("lng", 0)},{p.get("lat", 0)},0</coordinates></Point>\n'
         kml += '</Placemark>\n'
-    
+
     # Processos SIGMINE
     for s in pontos_sigmine:
         subs = s.get("subs", "Nao informada")
@@ -135,9 +135,9 @@ def exportar_kml():
         kml += '<styleUrl>#pontoSigmine</styleUrl>\n'
         kml += f'<Point><coordinates>{s.get("lng", 0)},{s.get("lat", 0)},0</coordinates></Point>\n'
         kml += '</Placemark>\n'
-    
+
     kml += '</Document>\n'
     kml += '</kml>'
-    
+
     return send_file(io.BytesIO(kml.encode("utf-8")), as_attachment=True, download_name='graos_de_ouro.kml', mimetype='application/vnd.google-earth.kml+xml')
 
