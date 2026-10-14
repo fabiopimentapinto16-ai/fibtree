@@ -138,6 +138,76 @@ def gerar_qr_code(lat, lng, caminho="/tmp/qrcode.png"):
         print(f"Erro QR: {e}")
         return None
 
+
+
+def gerar_mapa_area_provavel(lat, lng, ponto_interesse=None, raio_km=5, caminho="/tmp/mapa_area_provavel.jpg", zoom=12):
+    """Gera mapa com a area provavel destacada (circulo + poligono) e porcentagem."""
+    try:
+        n = 2 ** zoom
+        x_tile = int((lng + 180.0) / 360.0 * n)
+        lat_rad = math.radians(lat)
+        y_tile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+        url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{y_tile}/{x_tile}"
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        img = Image.open(BytesIO(r.content)).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        w, h = img.size
+
+        # Fator de escala
+        fator = 256 * (2 ** zoom) / 360.0
+        def latlng_para_pixel(p_lat, p_lng):
+            px = (p_lng - lng) * fator + w/2
+            py = -(p_lat - lat) * fator + h/2
+            return (px, py)
+
+        # Se tem ponto de interesse, calcular distancia
+        if ponto_interesse:
+            pi_lat = ponto_interesse.get("lat", lat)
+            pi_lng = ponto_interesse.get("lng", lng)
+            px_pi, py_pi = latlng_para_pixel(pi_lat, pi_lng)
+            
+            # Desenhar circulo de area provavel ao redor do PI
+            raio_pixels = int(raio_km * 1000 / 111.32 * fator / (2 ** zoom) * (2 ** zoom))
+            raio_pixels = int(raio_km * fator / 111.32)
+            
+            # Circulo externo (area provavel)
+            draw.ellipse([px_pi - raio_pixels, py_pi - raio_pixels, 
+                         px_pi + raio_pixels, py_pi + raio_pixels], 
+                         outline="gold", width=4)
+            
+            # Circulo interno (nucleo)
+            raio_nucleo = max(10, raio_pixels // 3)
+            draw.ellipse([px_pi - raio_nucleo, py_pi - raio_nucleo,
+                         px_pi + raio_nucleo, py_pi + raio_nucleo],
+                         fill="gold", outline="white", width=3)
+            
+            # Marcador do PI (estrela/asterisco)
+            draw.ellipse([px_pi - 6, py_pi - 6, px_pi + 6, py_pi + 6], 
+                        fill="red", outline="white", width=2)
+            
+            # Score em texto
+            score = ponto_interesse.get("score", 0)
+            draw.text((px_pi + 15, py_pi - 15), f"{score}%", fill="gold")
+
+        # Marcador do ponto analisado
+        px, py = latlng_para_pixel(lat, lng)
+        draw.ellipse([px - 10, py - 10, px + 10, py + 10], 
+                    outline="blue", width=3)
+        draw.ellipse([px - 5, py - 5, px + 5, py + 5], 
+                    fill="blue", outline="white", width=2)
+
+        # Bussola
+        draw.text((w - 30, 15), "N", fill="white")
+        draw.line([(w - 25, 35), (w - 25, 55)], fill="white", width=2)
+        draw.polygon([(w - 25, 30), (w - 30, 40), (w - 20, 40)], fill="white")
+
+        img.save(caminho, "JPEG", quality=90)
+        return caminho
+    except Exception as e:
+        print(f"Erro ao gerar mapa area provavel: {e}")
+        return None
+
 def _tabela_dados(dados, colWidths=None):
     if colWidths is None: colWidths = [8*cm, 8*cm]
     t = Table(dados, colWidths=colWidths)
