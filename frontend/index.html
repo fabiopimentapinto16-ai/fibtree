@@ -19,8 +19,11 @@ body.modo-claro { --darker: #f0f0f0; --dark: #e0e0e0; --glass: rgba(255,255,255,
 .panel-header { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 20px; }
 .panel-header .logo { font-family: 'Orbitron'; font-size: 22px; font-weight: 900; color: var(--yellow); text-shadow: 0 0 20px var(--yellow); letter-spacing: 3px; }
 .panel-header .subtitle { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; letter-spacing: 2px; text-transform: uppercase; }
+.hud-trial { padding: 10px; margin-bottom: 15px; border-radius: 6px; border: 1px dashed var(--yellow); background: rgba(255, 204, 0, 0.05); font-family: 'Orbitron'; font-size: 11px; text-align: center; color: var(--yellow); }
+.hud-trial.expired { border-color: var(--red); background: rgba(255, 51, 85, 0.1); color: var(--red); }
 .btn { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border); background: rgba(0, 240, 255, 0.05); color: var(--cyan); font-family: 'Orbitron'; font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer; border-radius: 6px; transition: all 0.3s; }
 .btn:hover { background: rgba(0, 240, 255, 0.15); box-shadow: 0 0 20px rgba(0,240,255,0.4); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none !important; background: rgba(255,255,255,0.05); }
 .btn.primary { background: rgba(0, 240, 255, 0.15); border-color: var(--cyan); }
 .btn.green { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
 .btn.yellow { background: rgba(255,204,0,0.1); border-color: var(--yellow); color: var(--yellow); }
@@ -42,9 +45,12 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 .evidence-box li::before { content: '> '; color: var(--cyan); }
 .loading { display: none; text-align: center; padding: 20px; }
 .spinner { width: 40px; height: 40px; border: 3px solid rgba(0,240,255,0.1); border-top-color: var(--cyan); border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
+.history-section { margin-top: 25px; border-top: 1px solid var(--border); padding-top: 15px; }
+.history-title { font-family: 'Orbitron'; font-size: 13px; color: var(--cyan); margin-bottom: 10px; letter-spacing: 1px; }
+.history-list { max-height: 180px; overflow-y: auto; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.history-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+.history-item:hover { background: rgba(0, 240, 255, 0.08); }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===== ANDROID ADAPTATIVO ===== */
 @media (max-width: 768px) {
     .panel { width: 100%; height: 55vh; top: 45vh; border-left: none; border-top: 2px solid var(--cyan); padding: 15px; border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0, 240, 255, 0.2); }
     .panel::before { content: ''; display: block; width: 50px; height: 4px; background: var(--cyan); border-radius: 2px; margin: 0 auto 12px; opacity: 0.5; }
@@ -54,11 +60,6 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
     .panel-header .logo { font-size: 16px; }
     .score-display .value { font-size: 42px; }
     .spinner { width: 50px; height: 50px; border-width: 4px; }
-}
-@media (max-width: 480px) {
-    .panel { height: 58vh; top: 42vh; padding: 12px; }
-    .btn { font-size: 11px; padding: 12px; }
-    .score-display .value { font-size: 36px; }
 }
 .leaflet-container { touch-action: pan-x pan-y; }
 </style>
@@ -71,16 +72,20 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
         <div class="logo">GRAOS DE OURO</div>
         <div class="subtitle">Prospeccao Mineral - Ouro + Terras Raras</div>
     </div>
+    <div class="hud-trial" id="trial-hud">Carregando limite de uso...</div>
     <button class="btn" onclick="ativarGPS()">ATIVAR GPS EM TEMPO REAL</button>
     <input type="number" id="lat" placeholder="Latitude" step="0.000001">
     <input type="number" id="lng" placeholder="Longitude" step="0.000001">
-    <button class="btn primary" onclick="analisar()">ANALISAR POTENCIAL</button>
+    <button class="btn primary" id="btn-analisar" onclick="analisar()">ANALISAR POTENCIAL</button>
     <button class="btn" onclick="alternarMapa()">ALTERNAR MAPA (HIBRIDO/SATELITE)</button>
     <button class="btn" onclick="toggleModo()">ALTERNAR MODO ESCURO/CLARO</button>
     <div class="loading" id="loading"><div class="spinner"></div><div style="margin-top: 10px; color: var(--cyan); font-size: 12px;">ANALISANDO...</div></div>
     <div class="result" id="result"></div>
+    <div class="history-section">
+        <div class="history-title">📍 ÚLTIMOS LOCAIS SALVOS (OFFLINE)</div>
+        <ul class="history-list" id="history-list-dom"></ul>
+    </div>
 </div>
-
 <div id="modal3d" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,4,8,0.95); z-index:9999; justify-content:center; align-items:center;">
     <div style="width:90%; max-width:900px; height:85%; background:#0a1420; border:1px solid #00f0ff; border-radius:12px; padding:20px; position:relative; display:flex; flex-direction:column;">
         <button onclick="fecharSimulacao3D()" style="position:absolute; top:15px; right:15px; background:transparent; border:1px solid #00f0ff; color:#00f0ff; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:18px;">X</button>
@@ -90,7 +95,6 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
         <div id="legenda3d" style="margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; font-size:11px;"></div>
     </div>
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -98,6 +102,61 @@ let map, marker, circle, gpsWatchId = null;
 let satLayer, hibridoLayer, camadaAtual = "hibrido";
 let cena3d, camera3d, renderizador3d, animacaoId;
 let analisandoEmAndamento = false;
+const MAX_ANALISES_GRATIS = 3;
+let analisesConsumidas = parseInt(localStorage.getItem('analises_consumidas') || '0');
+
+function atualizarTrialHUD() {
+    const hud = document.getElementById('trial-hud');
+    const btnAnalisar = document.getElementById('btn-analisar');
+    if (analisesConsumidas >= MAX_ANALISES_GRATIS) {
+        hud.className = "hud-trial expired";
+        hud.innerHTML = "⚠️ TESTE GRATUITO EXPIRADO<br><span style='font-size:9px;color:#fff;'>Adquira o plano Premium para realizar mais prospecções.</span>";
+        btnAnalisar.innerText = "PRODUTO PREMIUM REQUERIDO";
+    } else {
+        const restantes = MAX_ANALISES_GRATIS - analisesConsumidas;
+        hud.className = "hud-trial";
+        hud.innerHTML = `💎 TESTE GRÁTIS: ${restantes} de ${MAX_ANALISES_GRATIS} consultas restantes`;
+        btnAnalisar.innerText = "ANALISAR POTENCIAL";
+    }
+}
+
+function salvarNoHistoricoOffline(dados) {
+    let historico = JSON.parse(localStorage.getItem('historico_prospeccao') || '[]');
+    historico = historico.filter(x => x.coordenada.lat !== dados.coordenada.lat || x.coordenada.lng !== dados.coordenada.lng);
+    historico.unshift(dados);
+    if (historico.length > 50) { historico.pop(); }
+    localStorage.setItem('historico_prospeccao', JSON.stringify(historico));
+    renderizarHistoricoDOM();
+}
+
+function renderizarHistoricoDOM() {
+    const container = document.getElementById('history-list-dom');
+    const historico = JSON.parse(localStorage.getItem('historico_prospeccao') || '[]');
+    container.innerHTML = "";
+    if (historico.length === 0) {
+        container.innerHTML = `<li style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center;">Nenhum local salvo ainda</li>`;
+        return;
+    }
+    historico.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.className = "history-item";
+        const tP = item.tipo_principal === 'ouro' ? 'Ouro 🥇' : 'ETR 💎';
+        li.innerHTML = `
+            <div>
+                <strong>${tP} [${item.score_final}%]</strong><br>
+                <span style="font-size:10px;color:rgba(255,255,255,0.5);">${item.coordenada.lat.toFixed(4)}, ${item.coordenada.lng.toFixed(4)}</span>
+            </div>
+            <span style="color:var(--cyan);font-weight:700;">CARREGAR</span>
+        `;
+        li.onclick = () => {
+            document.getElementById('lat').value = item.coordenada.lat;
+            document.getElementById('lng').value = item.coordenada.lng;
+            document.getElementById('hud-coord').innerText = `LAT: ${item.coordenada.lat.toFixed(6)} | LNG: ${item.coordenada.lng.toFixed(6)}`;
+            renderizarResultado(item, item.coordenada.lat, item.coordenada.lng);
+        };
+        container.appendChild(li);
+    });
+}
 
 function initMap() {
     map = L.map('map').setView([-15, -50], 4);
@@ -112,7 +171,6 @@ function initMap() {
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        // NÃO chama analisar() automaticamente. Usuário precisa clicar no botão.
     });
 }
 
@@ -132,69 +190,45 @@ function toggleModo() {
 
 function ativarGPS() {
     if (!navigator.geolocation) { alert('GPS nao suportado pelo navegador'); return; }
-    
-    if (gpsWatchId) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-    }
-    
-    // Feedback visual
+    if (gpsWatchId) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
     document.getElementById('hud-coord').innerText = 'Buscando GPS...';
-    
     gpsWatchId = navigator.geolocation.watchPosition(function(pos) {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
-        
-        // 1. Preencher os inputs
         document.getElementById('lat').value = lat;
         document.getElementById('lng').value = lng;
-        
-        // 2. Atualizar o HUD
         document.getElementById('hud-coord').innerText = 'LAT: ' + lat + ' | LNG: ' + lng;
-        
-        // 3. === MOVER O MAPA ATE A POSICAO (era isso que faltava!) ===
         const latNum = parseFloat(lat);
         const lngNum = parseFloat(lng);
-        
-        // Colocar/atualizar o marcador do GPS
-        if (window._gpsMarker) {
-            map.removeLayer(window._gpsMarker);
-        }
+        if (window._gpsMarker) { map.removeLayer(window._gpsMarker); }
         window._gpsMarker = L.marker([latNum, lngNum], {
             icon: L.divIcon({
                 html: '<div style="background:#00ff88; width:20px; height:20px; border-radius:50%; border:3px solid #fff; box-shadow: 0 0 15px #00ff88; animation: pulse 1.5s infinite;"></div>',
                 className: '',
                 iconSize: [20, 20]
             })
-        }).addTo(map).bindPopup('<b>Voce esta aqui</b>');
-        
-        // Centralizar o mapa (com animacao)
+        }).addTo(map).bindPopup('<b>Você esta aqui</b>');
         map.setView([latNum, lngNum], 14, { animate: true });
-        
-    }, function(err) {
+    }, function(err) { 
         document.getElementById('hud-coord').innerText = 'Erro GPS: ' + err.message;
-        alert('Erro ao acessar GPS: ' + err.message + '\n\nVerifique se a permissao de localizacao esta ativada no navegador.');
+        alert('Erro ao acessar GPS: ' + err.message);
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
 async function analisar() {
-    // === TRAVA: Se já está analisando, ignora ===
-    if (analisandoEmAndamento) {
-        console.log('Analise em andamento. Ignorando nova solicitacao.');
+    if (analisesConsumidas >= MAX_ANALISES_GRATIS) {
+        alert("Seu limite de 3 consultas gratuitas do Teste de Prospecção se encerrou. Por favor, adquira ou ative uma licença Premium para obter relatórios adicionais e análises 3D.");
         return;
     }
-    
+    if (analisandoEmAndamento) return;
     const lat = parseFloat(document.getElementById('lat').value);
     const lng = parseFloat(document.getElementById('lng').value);
     if (isNaN(lat) || isNaN(lng)) { alert('Digite coordenadas ou clique no mapa'); return; }
-    
     analisandoEmAndamento = true;
     document.getElementById('loading').style.display = 'block';
     document.getElementById('result').style.display = 'none';
-    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
-    
     try {
         const resposta = await fetch('/api/analisar', {
             method: 'POST',
@@ -205,8 +239,12 @@ async function analisar() {
         clearTimeout(timeoutId);
         if (!resposta.ok) throw new Error('Erro ' + resposta.status);
         const dados = await resposta.json();
+        analisesConsumidas++;
+        localStorage.setItem('analises_consumidas', analisesConsumidas.toString());
+        atualizarTrialHUD();
         document.getElementById('loading').style.display = 'none';
         renderizarResultado(dados, lat, lng);
+        salvarNoHistoricoOffline(dados);
     } catch (e) {
         clearTimeout(timeoutId);
         document.getElementById('loading').style.display = 'none';
@@ -216,7 +254,6 @@ async function analisar() {
             alert('Erro: ' + e.message);
         }
     } finally {
-        // === SEMPRE LIBERA A TRAVA, mesmo se der erro ===
         analisandoEmAndamento = false;
     }
 }
@@ -224,20 +261,28 @@ async function analisar() {
 function renderizarResultado(dados, lat, lng) {
     const r = document.getElementById('result');
     let corClassif = dados.score_final >= 70 ? 'var(--green)' : dados.score_final >= 45 ? 'var(--yellow)' : 'var(--red)';
-    let iconeTipo = dados.tipo_principal === 'ouro' ? 'OURO' : 'TERRAS RARAS';
+    let iconeTipo = dados.tipo_principal === 'ouro' ? 'OURO 🥇' : 'TERRAS RARAS 💎';
     let html = '<div class="score-display"><div class="value" style="color:' + corClassif + ';">' + dados.score_final + '</div>';
     html += '<div class="classif" style="color:' + corClassif + ';">' + dados.classificacao + '</div>';
     html += '<div class="type">' + iconeTipo + '</div>';
     html += '<div style="font-size:11px; opacity:0.6; margin-top:8px;">Ouro: ' + dados.score_ouro + ' | ETR: ' + dados.score_etr + '</div></div>';
     if (dados.evidencias_ouro && dados.evidencias_ouro.length > 0) { html += '<div class="evidence-box"><h4>EVIDENCIAS OURO</h4><ul>'; dados.evidencias_ouro.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
     if (dados.evidencias_etr && dados.evidencias_etr.length > 0) { html += '<div class="evidence-box etr"><h4>EVIDENCIAS TERRAS RARAS</h4><ul>'; dados.evidencias_etr.forEach(e => html += '<li>' + e + '</li>'); html += '</ul></div>'; }
-    if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) { html += '<div class="evidence-box sigmine"><h4>PROCESSOS SIGMINE (15 km)</h4><ul>'; dados.pontos_sigmine.slice(0, 10).forEach(p => { html += '<li>' + p.processo + ' - ' + p.subs + ' (' + p.distancia_km + ' km)</li>'; }); html += '</ul></div>'; }
-    html += '<button class="btn primary" onclick="gerarPDF()">GERAR RELATORIO PDF</button>';
-    html += '<button class="btn green" onclick="abrirSimulacao3D()">VER SIMULACAO 3D DO SUBSOLO</button>';
-    html += '<button class="btn yellow" onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>';
-    html += '<button class="btn" onclick="exportarKML()">EXPORTAR KML</button>';
-    html += '<button class="btn" onclick="abrirGoogleEarth()">ABRIR NO GOOGLE EARTH</button>';
-    html += '<button class="btn orange" onclick="criarRota()">CRIAR ROTA ATE AQUI (GPS)</button>';
+    if (dados.pontos_sigmine && dados.pontos_sigmine.length > 0) {
+        html += '<div class="evidence-box sigmine"><h4>PROCESSOS SIGMINE (15 km)</h4><ul>';
+        dados.pontos_sigmine.slice(0, 10).forEach(p => { 
+            html += '<li>' + p.processo + ' - ' + p.subs + ' (' + p.distancia_km + ' km)</li>'; 
+        });
+        html += '</ul></div>';
+    }
+    const trialAcabou = analisesConsumidas >= MAX_ANALISES_GRATIS;
+    const dis = trialAcabou ? 'disabled' : '';
+    html += `<button class="btn primary" ${dis} onclick="gerarPDF()">GERAR RELATORIO PDF</button>`;
+    html += `<button class="btn green" ${dis} onclick="abrirSimulacao3D()">VER SIMULACAO 3D DO SUBSOLO</button>`;
+    html += `<button class="btn yellow" ${dis} onclick="gerarMemorial()">GERAR MEMORIAL DESCRITIVO</button>`;
+    html += `<button class="btn" ${dis} onclick="exportarKML()">EXPORTAR KML</button>`;
+    html += `<button class="btn" onclick="abrirGoogleEarth()">ABRIR NO GOOGLE EARTH</button>`;
+    html += `<button class="btn orange" onclick="criarRota()">CRIAR ROTA ATE AQUI (GPS)</button>`;
     if (dados.ponto_interesse) {
         html += '<button class="btn" onclick="irParaPontoInteresse()" style="background: rgba(255,215,0,0.15); border-color: #FFD700; color: #FFD700;">IR AO PONTO DE INTERESSE (' + dados.ponto_interesse.score + '%)</button>';
     }
@@ -254,29 +299,15 @@ function renderizarResultado(dados, lat, lng) {
             let cor = p.tipo === 'ouro' ? '#ffcc00' : '#00f0ff';
             if (p.dentro) cor = '#ff3355';
             let ic = L.divIcon({ html: '<div style="background:' + cor + '; width:14px; height:14px; border-radius:50%; border:2px solid #fff;"></div>', className: '', iconSize: [14, 14] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup(
-                '<b>' + p.nome + '</b><br>' +
-                'Tipo: ' + p.tipo.toUpperCase() + '<br>' +
-                'Distancia: ' + p.distancia_km + ' km<br>' +
-                '<button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>'
-            );
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>' + p.nome + '</b><br>' + p.tipo.toUpperCase() + '<br>' + p.distancia_km + ' km<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:5px;padding:6px 10px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>');
         });
     }
     if (dados.pontos_sigmine) {
         dados.pontos_sigmine.slice(0, 20).forEach(p => {
             let ic = L.divIcon({ html: '<div style="background:#00ff88; width:10px; height:10px; border-radius:50%; border:1px solid #fff;"></div>', className: '', iconSize: [10, 10] });
-            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup(
-                '<b>Processo: ' + p.processo + '</b><br>' +
-                '<span style="color:#00ff88;font-weight:bold;">Substancia: ' + (p.subs || 'Nao informada') + '</span><br>' +
-                'Fase: ' + (p.fase || 'Nao informada') + '<br>' +
-                'Distancia: ' + p.distancia_km + ' km<br>' +
-                'UF: ' + (p.uf || '-') + '<br>' +
-                '<button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:8px;padding:8px 12px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px;">Criar Rota</button>'
-            );
+            L.marker([p.lat, p.lng], {icon: ic}).addTo(map).bindPopup('<b>Processo: ' + p.processo + '</b><br><span style="color:#00ff88;font-weight:bold;">Substancia: ' + (p.subs || 'Nao informada') + '</span><br>Fase: ' + (p.fase || 'Nao informada') + '<br>Distancia: ' + p.distancia_km + ' km<br>UF: ' + (p.uf || '-') + '<br><button onclick="rotaPontoEspecifico(' + p.lat + ',' + p.lng + ')" style="margin-top:8px;padding:8px 12px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px;">Criar Rota</button>');
         });
     }
-
-    // === MARCADOR DO PONTO DE INTERESSE ===
     if (dados.ponto_interesse) {
         const pi = dados.ponto_interesse;
         const corPI = pi.tipo === 'ouro' ? '#FFD700' : '#00FFFF';
@@ -294,14 +325,10 @@ function renderizarResultado(dados, lat, lng) {
             '<button onclick="rotaPontoEspecifico(' + pi.lat + ',' + pi.lng + ')" style="margin-top:8px;padding:8px 12px;background:#ff6400;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Criar Rota</button>'
         ).openPopup();
     }
-
 }
 
 function irParaPontoInteresse() {
-    if (!window.ultimaAnalise || !window.ultimaAnalise.ponto_interesse) {
-        alert('Nenhum ponto de interesse calculado.');
-        return;
-    }
+    if (!window.ultimaAnalise || !window.ultimaAnalise.ponto_interesse) { alert('Nenhum ponto de interesse calculado.'); return; }
     const pi = window.ultimaAnalise.ponto_interesse;
     map.setView([pi.lat, pi.lng], 15);
 }
@@ -309,15 +336,15 @@ function irParaPontoInteresse() {
 function gerarPDF() {
     if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
     fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
-    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_graos_de_ouro.pdf'; a.click(); })
-    .catch(e => alert('Erro: ' + e.message));
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'relatorio_graos_de_ouro.pdf'; a.click(); URL.revokeObjectURL(url); })
+    .catch(e => alert('Erro ao gerar PDF: ' + e.message));
 }
 
 function gerarMemorial() {
     if (!window.ultimaAnalise) { alert('Faca uma analise primeiro'); return; }
     fetch('/api/gerar-memorial', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(window.ultimaAnalise) })
-    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'memorial_descritivo.pdf'; a.click(); })
-    .catch(e => alert('Erro: ' + e.message));
+    .then(r => r.blob()).then(blob => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'memorial_descritivo.pdf'; a.click(); URL.revokeObjectURL(url); })
+    .catch(e => alert('Erro ao gerar memorial: ' + e.message));
 }
 
 function exportarKML() {
@@ -345,17 +372,9 @@ function criarRota() {
         const origemLat = pos.coords.latitude.toFixed(6);
         const origemLng = pos.coords.longitude.toFixed(6);
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let url;
-        if (isMobile) {
-            url = 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + lat + ',' + lng + '&travelmode=driving';
-        } else {
-            url = 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + lat + ',' + lng;
-        }
+        let url = isMobile ? 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + lat + ',' + lng + '&travelmode=driving' : 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + lat + ',' + lng;
         window.open(url, '_blank');
-    }, function(err) {
-        document.getElementById('loading').style.display = 'none';
-        alert('Erro GPS: ' + err.message);
-    }, { enableHighAccuracy: true, timeout: 15000 });
+    }, function(err) { document.getElementById('loading').style.display = 'none'; alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 15000 });
 }
 
 function rotaPontoEspecifico(destLat, destLng) {
@@ -366,17 +385,9 @@ function rotaPontoEspecifico(destLat, destLng) {
         const origemLat = pos.coords.latitude.toFixed(6);
         const origemLng = pos.coords.longitude.toFixed(6);
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let url;
-        if (isMobile) {
-            url = 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + destLat + ',' + destLng + '&travelmode=driving';
-        } else {
-            url = 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + destLat + ',' + destLng;
-        }
+        let url = isMobile ? 'https://www.google.com/maps/dir/?api=1&origin=' + origemLat + ',' + origemLng + '&destination=' + destLat + ',' + destLng + '&travelmode=driving' : 'https://www.google.com/maps/dir/' + origemLat + ',' + origemLng + '/' + destLat + ',' + destLng;
         window.open(url, '_blank');
-    }, function(err) {
-        document.getElementById('loading').style.display = 'none';
-        alert('Erro GPS: ' + err.message);
-    }, { enableHighAccuracy: true, timeout: 15000 });
+    }, function(err) { document.getElementById('loading').style.display = 'none'; alert('Erro GPS: ' + err.message); }, { enableHighAccuracy: true, timeout: 15000 });
 }
 
 function abrirSimulacao3D() {
@@ -394,7 +405,7 @@ function fecharSimulacao3D() {
     if (animacaoId) cancelAnimationFrame(animacaoId);
 }
 
-function montarBloco3D(dados) {
+function montarBloco3D(dados) { 
     const container = document.getElementById('canvas3d');
     const largura = container.clientWidth;
     const altura = container.clientHeight;
@@ -445,6 +456,8 @@ function montarBloco3D(dados) {
 
 window.onload = function() {
     initMap();
+    atualizarTrialHUD();
+    renderizarHistoricoDOM();
     if (localStorage.getItem('modo') === 'claro') {
         document.body.classList.add('modo-claro');
     }
