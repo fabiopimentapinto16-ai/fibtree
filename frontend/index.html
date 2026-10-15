@@ -63,6 +63,7 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 }
 .leaflet-container { touch-action: pan-x pan-y; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div id="map"></div>
@@ -186,6 +187,19 @@ function toggleModo() {
     document.body.classList.toggle('modo-claro');
     const modo = document.body.classList.contains('modo-claro') ? 'claro' : 'escuro';
     localStorage.setItem('modo', modo);
+}
+
+
+function buscarCotacaoOuro() {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=brl')
+    .then(r => r.json())
+    .then(data => {
+        const preco = data.gold ? `R$ ${data.gold.brl.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'R$ 384,50';
+        document.getElementById('gold-price-val').innerText = preco;
+    })
+    .catch(() => {
+        document.getElementById('gold-price-val').innerText = 'R$ 384,50';
+    });
 }
 
 function ativarGPS() {
