@@ -187,8 +187,56 @@ function toggleModo() {
     document.body.classList.toggle('modo-claro');
     const modo = document.body.classList.contains('modo-claro') ? 'claro' : 'escuro';
     localStorage.setItem('modo', modo);
+    renderizarGraficoTendencia();
 }
 
+
+
+function renderizarGraficoTendencia() {
+    const ctx = document.getElementById('goldTrendChart').getContext('2d');
+    const coresModo = document.body.classList.contains('modo-claro') ? 
+        { texto: '#111', grid: 'rgba(0,0,0,0.05)', linha: '#0066ff' } : 
+        { texto: '#fff', grid: 'rgba(255,255,255,0.05)', linha: '#00f0ff' };
+
+    if (window.trendChartInstance) {
+        window.trendChartInstance.destroy();
+    }
+
+    window.trendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+            datasets: [{
+                label: 'Ouro (R$/g)',
+                data: [340.50, 348.20, 355.80, 362.40, 371.10, 384.50],
+                borderColor: coresModo.linha,
+                backgroundColor: 'rgba(0, 240, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true }
+            },
+            scales: {
+                x: {
+                    grid: { color: coresModo.grid },
+                    ticks: { color: coresModo.texto, font: { family: 'Rajdhani', size: 10 } }
+                },
+                y: {
+                    grid: { color: coresModo.grid },
+                    ticks: { color: coresModo.texto, font: { family: 'Rajdhani', size: 10 } }
+                }
+            }
+        }
+    });
+}
 
 function buscarCotacaoOuro() {
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=brl')
