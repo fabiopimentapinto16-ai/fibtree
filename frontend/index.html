@@ -62,6 +62,49 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
     .spinner { width: 50px; height: 50px; border-width: 4px; }
 }
 .leaflet-container { touch-action: pan-x pan-y; }
+
+/* ===== DESCRIÇÃO COMPLETA DO MINÉRIO ===== */
+.painel-descricao-minerio {
+    background: rgba(8, 18, 32, 0.95);
+    border: 1px solid #00f0ff55;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 8px 0;
+    font-family: 'Rajdhani', sans-serif;
+    color: #e8f4ff;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.painel-descricao-minerio h4 {
+    margin: 0 0 8px 0;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    color: #ffd700;
+}
+.painel-descricao-minerio .meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #9ec9e8;
+}
+.painel-descricao-minerio .meta b { color: #00f0ff; }
+.painel-descricao-minerio .texto-desc {
+    white-space: pre-line;
+    color: #cfe8ff;
+    border-top: 1px solid #1a3a55;
+    padding-top: 8px;
+    margin-top: 4px;
+}
+.lista-descricoes-minerios {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+.badge-tipo-ouro { color: #ffd700; font-weight: 700; }
+.badge-tipo-ETR { color: #c77dff; font-weight: 700; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -516,6 +559,74 @@ function montarBloco3D(dados) {
     animar();
 }
 
+
+// ===== DESCRIÇÃO COMPLETA DOS MINÉRIOS =====
+function renderizarDescricoesMinerios(dados) {
+    let container = document.getElementById("lista-descricoes-minerios");
+    if (!container) {
+        const painel = document.getElementById("resultado") ||
+                       document.getElementById("result-panel") ||
+                       document.querySelector(".result-panel") ||
+                       document.querySelector("#painel-resultado");
+        if (painel) {
+            container = document.createElement("div");
+            container.id = "lista-descricoes-minerios";
+            container.className = "lista-descricoes-minerios";
+            painel.appendChild(container);
+        } else {
+            return;
+        }
+    }
+
+    const depositos = dados.descricoes_depositos || [];
+    const sigmine = dados.descricoes_sigmine || [];
+    const todos = depositos.concat(sigmine);
+
+    if (!todos.length) {
+        container.innerHTML = '<div class="painel-descricao-minerio">Nenhuma descrição detalhada disponível para este ponto.</div>';
+        return;
+    }
+
+    let html = '<h3 style="font-family:Orbitron,sans-serif;color:#00f0ff;font-size:14px;margin:12px 0 8px 0;">📋 Descrição dos Minérios Encontrados</h3>';
+
+    todos.forEach((m, i) => {
+        const badge = m.tipo === "ouro" ? "badge-tipo-ouro" :
+                      m.tipo === "ETR" ? "badge-tipo-ETR" : "";
+        const tipoLabel = m.tipo === "ouro" ? "OURO" :
+                          m.tipo === "ETR" ? "TERRAS RARAS" :
+                          (m.tipo || "N/D").toUpperCase();
+
+        html += `
+        <div class="painel-descricao-minerio" data-tipo-deposito="${m.tipo || ''}">
+            <h4>${i + 1}. ${m.titulo || "Minério"}</h4>
+            <div class="meta">
+                <div><b>Tipo:</b> <span class="\( {badge}"> \)${tipoLabel}</span></div>
+                <div><b>Origem:</b> ${m.origem || "—"}</div>
+                <div><b>Distância:</b> ${m.distancia_km != null ? m.distancia_km + " km" : "—"}</div>
+                <div><b>Direção:</b> ${m.direcao || "—"}</div>
+                <div><b>Processo:</b> ${m.processo || "—"}</div>
+                <div><b>Fase:</b> ${m.fase || "—"}</div>
+                <div><b>Facilidade:</b> ${m.facilidade || "—"}</div>
+                <div><b>Coord.:</b> ${m.coordenadas || "—"}</div>
+            </div>
+            <div class="texto-desc">${m.descricao || ""}</div>
+            ${m.lat && m.lng && typeof botaoRota === "function" ? botaoRota(m.lat, m.lng, m.titulo) : ""}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+(function() {
+    const _orig = window.renderizarResultado;
+    if (typeof _orig === "function") {
+        window.renderizarResultado = function(dados) {
+            _orig(dados);
+            try { renderizarDescricoesMinerios(dados); } catch(e) { console.log(e); }
+        };
+    }
+})();
+
 window.onload = function() {
     initMap();
     atualizarTrialHUD();
@@ -525,5 +636,6 @@ window.onload = function() {
     }
 };
 </script>
+<div id="lista-descricoes-minerios" class="lista-descricoes-minerios"></div>
 </body>
 </html>

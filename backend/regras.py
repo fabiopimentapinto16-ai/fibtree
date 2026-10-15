@@ -115,6 +115,74 @@ def calcular_distancia_km(lat1, lng1, lat2, lng2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
     return R * 2 * math.asin(math.sqrt(a))
 
+
+
+def descrever_minerio(item, origem="deposito"):
+    """
+    Monta descrição completa do minério a partir da base.
+    origem: 'deposito' (REGIOES) ou 'sigmine' (processos ANM)
+    """
+    if origem == "sigmine":
+        nome = item.get("subs") or item.get("substância") or "Substância não informada"
+        processo = item.get("processo") or "—"
+        fase = item.get("fase") or "—"
+        tipo = item.get("tipo") or "outro"
+        dist = item.get("distancia_km", "—")
+        lat = item.get("lat")
+        lng = item.get("lng")
+        return {
+            "titulo": nome,
+            "tipo": tipo,
+            "origem": "SIGMINE / ANM",
+            "processo": processo,
+            "fase": fase,
+            "distancia_km": dist,
+            "coordenadas": f"{lat}, {lng}" if lat and lng else "—",
+            "descricao": (
+                f"Processo mineral registrado na base oficial da ANM/SIGMINE.\n"
+                f"Substância: {nome}\n"
+                f"Número do processo: {processo}\n"
+                f"Fase atual: {fase}\n"
+                f"Distância do ponto analisado: {dist} km\n"
+                f"Tipo classificado: {tipo.upper() if tipo else 'N/D'}\n"
+                f"Fonte: base pública com \~270 mil processos minerários."
+            ),
+            "lat": lat,
+            "lng": lng
+        }
+    else:
+        nome = item.get("nome") or "Depósito"
+        tipo = item.get("tipo") or "—"
+        dist = item.get("distancia_km", "—")
+        direcao = item.get("direcao") or "—"
+        bearing = item.get("bearing")
+        facilidade = item.get("facilidade") or "média"
+        lat = item.get("lat")
+        lng = item.get("lng")
+        desc_tipo = "Ouro" if tipo == "ouro" else "Terras Raras (ETR)" if tipo == "ETR" else tipo
+        return {
+            "titulo": nome,
+            "tipo": tipo,
+            "origem": "Depósito / Província conhecida",
+            "processo": "—",
+            "fase": "Referência geológica",
+            "distancia_km": dist,
+            "direcao": f"{direcao}" + (f" ({bearing}°)" if bearing is not None else ""),
+            "facilidade": facilidade,
+            "coordenadas": f"{lat}, {lng}" if lat and lng else "—",
+            "descricao": (
+                f"Área de referência mineral conhecida.\n"
+                f"Nome: {nome}\n"
+                f"Minério principal: {desc_tipo}\n"
+                f"Distância: {dist} km • Direção: {direcao}"
+                + (f" ({bearing}°)" if bearing is not None else "") + "\n"
+                f"Facilidade de acesso/lavra: {facilidade}\n"
+                f"Fonte: base de depósitos e províncias minerais de referência."
+            ),
+            "lat": lat,
+            "lng": lng
+        }
+
 def calcular_score(lat, lng, dados_satelite=None):
     # VERIFICAR CACHE
     if dados_satelite is None:
