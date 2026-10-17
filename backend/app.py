@@ -152,3 +152,18 @@ def gerar_requerimento_endpoint():
         return send_file(caminho, as_attachment=True, download_name='requerimento_anm.pdf', mimetype='application/pdf')
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
+
+try:
+    from detectorismo import bp_detector
+    app.register_blueprint(bp_detector)
+except Exception as _e: print('detectorismo:', _e)
+
+try:
+    from anti_bitola import bp_anti
+    app.register_blueprint(bp_anti)
+except Exception as _e: print('anti_bitola:', _e)
+
+try:
+    from requerimentos_ext import bp_requerimentos
+    app.register_blueprint(bp_requerimentos)
+except Exception as _e: print('requerimentos:', _e)
