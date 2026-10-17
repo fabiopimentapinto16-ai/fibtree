@@ -107,6 +107,51 @@ input { width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(0,0,0,
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { margin: 0; overflow: hidden; }
+#map { width: 100%; height: 100vh; }
+.panel { position: fixed; top: 0; right: 0; width: 420px; height: 100vh; overflow-y: auto; background: rgba(10,20,35,0.95); z-index: 1000; padding: 20px; box-sizing: border-box; }
+@media (max-width: 768px) { #map { height: 50vh; } .panel { width: 100%; height: 50vh; top: 50vh; } }
+</style>
+
+<script>
+/* === MELHORIAS DEFINITIVAS === */
+function abrirHistorico() {
+    const hist = JSON.parse(localStorage.getItem('historico_graos') || '[]');
+    const lista = document.getElementById('listaHistorico');
+    if (!lista) return;
+    lista.innerHTML = hist.length ? hist.map(h => '<div style="background:rgba(0,240,255,0.1);padding:5px;margin:2px;border-radius:4px;">'+h.score+'/100 - '+h.classificacao+'</div>').join('') : '<p>Vazio</p>';
+    document.getElementById('modalHistorico').style.display = 'flex';
+}
+function fecharHistorico() { document.getElementById('modalHistorico').style.display = 'none'; }
+function exportarCSV() { alert('CSV Exportado (Simulação)'); }
+let rotaLayer = null;
+function toggleRotaOSRM() {
+    if (rotaLayer) { map.removeLayer(rotaLayer); rotaLayer = null; return; }
+    if (!window.ultimaAnalise) { alert('Faça uma análise primeiro'); return; }
+    const lat = window.ultimaAnalise.coordenada.lat, lng = window.ultimaAnalise.coordenada.lng;
+    navigator.geolocation.getCurrentPosition(p => {
+        const url = 'https://router.project-osrm.org/route/v1/driving/'+p.coords.longitude+','+p.coords.latitude+';'+lng+','+lat+'?overview=full&geometries=geojson';
+        fetch(url).then(r=>r.json()).then(d => {
+            if(d.code !== 'Ok') return;
+            rotaLayer = L.layerGroup([L.polyline(d.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]),{color:'#ffff00',weight:5}), L.marker([p.coords.latitude, p.coords.longitude]).bindPopup('Você'), L.marker([lat, lng]).bindPopup('Destino')]).addTo(map);
+            map.fitBounds(rotaLayer.getBounds());
+        });
+    });
+}
+let modoAmostra = false;
+function ativarModoAmostra() { modoAmostra = !modoAmostra; document.getElementById('map').style.cursor = modoAmostra ? 'crosshair' : ''; }
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('map').addEventListener('click', e => {
+        if (modoAmostra) {
+            L.marker(e.latlng, {icon: L.divIcon({html: '<div style="background:#c864ff;width:14px;height:14px;border-radius:50%;"></div>'})}).addTo(map).bindPopup('Amostra');
+            modoAmostra = false; document.getElementById('map').style.cursor = '';
+        }
+    });
+});
+</script>
+
 </head>
 <body>
 <div id="map"></div>
