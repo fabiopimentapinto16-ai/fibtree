@@ -230,3 +230,31 @@ function trocarCamadaRota(tipo) {
     }
     camadaRota.addTo(mapRota);
 }
+
+function gerarRequerimento() {
+    if (!ultimaAnalise) return alert('Faça uma análise primeiro para gerar o requerimento.');
+    let btn = document.getElementById('btn-requerimento');
+    let txt = btn.innerText;
+    btn.innerText = 'Gerando...';
+
+    fetch('/api/gerar-requerimento', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(ultimaAnalise)
+    })
+    .then(r => {
+        if(!r.ok) throw new Error('Erro no servidor');
+        return r.blob();
+    })
+    .then(b => {
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = 'requerimento_anm.pdf';
+        a.click();
+        btn.innerText = txt;
+    })
+    .catch(e => {
+        alert('Erro ao gerar documento: ' + e.message);
+        btn.innerText = txt;
+    });
+}

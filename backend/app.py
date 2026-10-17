@@ -141,3 +141,14 @@ def exportar_kml():
 
     return send_file(io.BytesIO(kml.encode("utf-8")), as_attachment=True, download_name='graos_de_ouro.kml', mimetype='application/vnd.google-earth.kml+xml')
 
+
+@app.route('/api/gerar-requerimento', methods=['POST'])
+def gerar_requerimento_endpoint():
+    dados = request.get_json()
+    caminho = '/tmp/requerimento_anm.pdf'
+    try:
+        from gerador_requerimento import gerar_pdf_requerimento
+        gerar_pdf_requerimento(dados, caminho)
+        return send_file(caminho, as_attachment=True, download_name='requerimento_anm.pdf', mimetype='application/pdf')
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
