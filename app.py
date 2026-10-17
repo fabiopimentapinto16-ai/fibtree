@@ -11,15 +11,13 @@ app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 def index():
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
-# Puxa todas as rotas (PDF, Memorial, KML, SIGMINE, 3D) do backend original
 try:
     from backend.app import app as backend_app
-    # Copia as rotas do backend para o app principal
     for rule in backend_app.url_map.iter_rules():
         if rule.endpoint != 'static' and rule.rule != '/':
             app.add_url_rule(rule.rule, rule.endpoint, backend_app.view_functions[rule.endpoint], methods=rule.methods)
 except Exception as e:
-    print("Aviso: Backend original não carregado completamente:", e)
+    print("Aviso Backend:", e)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

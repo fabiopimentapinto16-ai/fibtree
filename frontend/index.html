@@ -18,13 +18,15 @@
         <button id="btn-analisar" class="primary" onclick="analisar()">🔍 ANALISAR POTENCIAL</button>
         <div id="resultado"></div>
         <hr>
+        <button onclick="gerarPDF()">📄 GERAR PDF</button>
+        <button onclick="gerarMemorial()">📋 MEMORIAL DESCRITIVO</button>
+        <button onclick="exportarKML()">🌍 EXPORTAR KML</button>
         <button onclick="abrirHistorico()">📜 HISTÓRICO</button>
         <button onclick="exportarCSV()">📊 EXPORTAR CSV</button>
         <button onclick="ativarModoAmostra()">📍 MARCAR AMOSTRA</button>
         <button onclick="toggleRota()">🛣️ ROTA OSRM</button>
         <button onclick="ativarDetectorismo()" style="color:#00ff88; border-color:#00ff88;">⛏ DETECTORISMO</button>
         <button onclick="abrir3D()" style="color:#ffcc00; border-color:#ffcc00;">📦 SIMULAÇÃO 3D</button>
-        <button onclick="gerarPDF()">📄 GERAR PDF</button>
     </div>
     <div id="modalHistorico" class="modal"><div class="modal-content"><span class="close" onclick="fecharModal('modalHistorico')">&times;</span><h2>Histórico</h2><div id="listaHistorico"></div></div></div>
     <div id="modal3D" class="modal"><div class="modal-content" style="height: 80%; display: flex; flex-direction: column;"><span class="close" onclick="fecharModal('modal3D')">&times;</span><h2>Simulação 3D</h2><div id="canvas3d" style="flex: 1; background: #000; border-radius: 4px; overflow: hidden;"></div></div></div>
