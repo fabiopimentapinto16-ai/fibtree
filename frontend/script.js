@@ -1,8 +1,6 @@
-let map, radarLayers = [], rotaLayer = null, modoAmostra = false;
-let ultimaAnalise = null;
+let map, radarLayers = [], modoAmostra = false, ultimaAnalise = null;
 let mapRota, camadaRotaAtual = 'sat', camadaRota = null;
 
-// 1. Inicializar Mapa Principal (GRÁTIS: Esri World Imagery)
 map = L.map('map', {preferCanvas: true}).setView([-15, -50], 4);
 const camadaSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
 
@@ -49,16 +47,15 @@ function atualizarScore(dados) {
     let cor = dados.score_final >= 70 ? '#00ff88' : dados.score_final >= 45 ? '#ffcc00' : '#ff3355';
     card.style.borderColor = cor; document.querySelector('.score-circle').style.borderColor = cor; document.getElementById('score-value').style.color = cor;
 
-    // FOTO REAL DO MINÉRIO
     let imgEl = document.getElementById('mineral-image');
     if (imgEl) {
         imgEl.style.display = 'block';
         if (dados.tipo_principal === 'ouro') {
-            imgEl.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Gold_ore_%28Kalgoorlie%2C_Western_Australia%29.jpg/400px-Gold_ore_%28Kalgoorlie%2C_Western_Australia%29.jpg';
+            imgEl.src = 'https://images.unsplash.com/photo-1610375461246-83df859d849d?q=80&w=400&auto=format&fit=crop';
             imgEl.alt = 'Minério de Ouro Real';
         } else {
-            imgEl.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Bastn%C3%A4sit.jpg/400px-Bastn%C3%A4sit.jpg';
-            imgEl.alt = 'Minério de Terras Raras (Bastnasita)';
+            imgEl.src = 'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?q=80&w=400&auto=format&fit=crop';
+            imgEl.alt = 'Minério de Terras Raras';
         }
     }
 }
@@ -118,40 +115,89 @@ function trocarCamadaRota(tipo) {
     if (!mapRota) return;
     mapRota.removeLayer(camadaRota);
     if (tipo === 'sat') camadaRota = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    else if (tipo === 'falsecolor') camadaRota = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_Bands721/default/2023-10-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, opacity: 0.9 }); // GRÁTIS: NASA GIBS
+    else if (tipo === 'falsecolor') camadaRota = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_Bands721/default/2023-10-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, opacity: 0.9 });
     else if (tipo === 'heat') {
         if (ultimaAnalise && ultimaAnalise.pontos_sigmine) camadaRota = L.heatLayer(ultimaAnalise.pontos_sigmine.map(p => [p.lat, p.lng, 0.8]), {radius: 25, blur: 15, maxZoom: 17});
-        else { camadaRota = camadaSat; alert('Faça uma análise primeiro para ver o calor.'); }
+        else { camadaRota = camadaSat; alert('Faça uma análise primeiro.'); }
     }
     camadaRota.addTo(mapRota);
 }
 
 function criarRotaGoogleMaps() { if (!ultimaAnalise) return alert('Faça uma análise primeiro'); criarRota(ultimaAnalise.coordenada.lat, ultimaAnalise.coordenada.lng); }
 function ativarDetectorismo() { if (!ultimaAnalise) return alert('Faça uma análise primeiro.'); const pi = ultimaAnalise.ponto_interesse; if (pi) criarRota(pi.lat, pi.lng); else alert('Nenhum ponto ideal encontrado.'); }
+
 function gerarPDF() { if(!ultimaAnalise) return alert('Analise primeiro'); fetch('/api/gerar-pdf', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ultimaAnalise) }).then(r=>r.blob()).then(b => { let a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'relatorio.pdf'; a.click(); }); }
 function gerarMemorial() { if(!ultimaAnalise) return alert('Analise primeiro'); fetch('/api/gerar-memorial', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ultimaAnalise) }).then(r=>r.blob()).then(b => { let a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'memorial.pdf'; a.click(); }); }
 function exportarKML() { if(!ultimaAnalise) return alert('Analise primeiro'); fetch('/api/exportar-kml', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(ultimaAnalise) }).then(r=>r.blob()).then(b => { let a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'mapa.kml'; a.click(); }); }
+
 function abrirHistorico() { let h = JSON.parse(localStorage.getItem('historico') || '[]'); document.getElementById('listaHistorico').innerHTML = h.length ? h.map(x => '<div style="border-bottom:1px solid #333; padding:10px;">Lat: ' + x.lat + ' | Score: ' + x.score + '</div>').join('') : '<p>Vazio</p>'; document.getElementById('modalHistorico').style.display = 'flex'; }
 function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 function exportarCSV() { let h = JSON.parse(localStorage.getItem('historico') || '[]'); if(!h.length) return; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['Lat,Lng,Score\n' + h.map(x => x.lat + ',' + x.lng + ',' + x.score).join('\n')], {type: 'text/csv'})); a.download = 'hist.csv'; a.click(); }
 function ativarModoAmostra() { modoAmostra = true; alert('Clique no mapa para marcar a amostra.'); }
 function ativarGPS() { navigator.geolocation.getCurrentPosition(p => { document.getElementById('lat').value = p.coords.latitude.toFixed(6); document.getElementById('lng').value = p.coords.longitude.toFixed(6); map.setView([p.coords.latitude, p.coords.longitude], 13); }); }
 
-function abrir3D() {
+async function abrir3D() {
     document.getElementById('modal3D').style.display = 'flex';
-    setTimeout(function() {
-        let container = document.getElementById('canvas3d'); container.innerHTML = '';
+    let container = document.getElementById('canvas3d');
+    let legenda = document.getElementById('legenda3d');
+    container.innerHTML = '<div style="color:#fff; text-align:center; padding-top:100px;">Carregando...</div>';
+    legenda.innerHTML = '';
+
+    let camadas = [];
+    try {
+        if (ultimaAnalise) {
+            let res = await fetch('/api/simular-subsolo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({lat: ultimaAnalise.coordenada.lat, lng: ultimaAnalise.coordenada.lng, resultado_analise: ultimaAnalise}) });
+            let dadosSim = await res.json();
+            camadas = dadosSim.camadas || [];
+        }
+    } catch(e) { console.warn(e); }
+
+    if (camadas.length === 0) {
+        camadas = [
+            {profundidade_cm: 0, espessura_cm: 30, tipo: "Solo Orgânico", cor: "#8B7355"},
+            {profundidade_cm: 30, espessura_cm: 40, tipo: "Cascalho", cor: "#A0522D"},
+            {profundidade_cm: 70, espessura_cm: 50, tipo: "Zona Mineralizada", cor: "#FFD700"},
+            {profundidade_cm: 120, espessura_cm: 80, tipo: "Rocha Base", cor: "#696969"}
+        ];
+    }
+
+    setTimeout(() => {
+        container.innerHTML = '';
         let largura = container.clientWidth || 300, altura = container.clientHeight || 300;
         let cena = new THREE.Scene(); cena.background = new THREE.Color(0x020408);
         let camera = new THREE.PerspectiveCamera(45, largura/altura, 0.1, 1000); camera.position.set(8, 6, 10); camera.lookAt(0, 0, 0);
         let renderer = new THREE.WebGLRenderer({antialias: true}); renderer.setSize(largura, altura); container.appendChild(renderer.domElement);
         cena.add(new THREE.AmbientLight(0xffffff, 0.6));
         let luz = new THREE.DirectionalLight(0xffffff, 0.8); luz.position.set(10, 15, 10); cena.add(luz);
-        [0x8B7355, 0xA0522D, 0xFFD700, 0x696969].forEach((cor, i) => {
-            let geom = new THREE.BoxGeometry(6, 0.8, 6), mat = new THREE.MeshPhongMaterial({color: cor, transparent: true, opacity: 0.9});
-            let bloco = new THREE.Mesh(geom, mat); bloco.position.y = 1 - (i * 0.8); cena.add(bloco);
+        
+        let yAtual = 0, escala = 2;
+        let totalAltura = camadas.reduce((acc, c) => acc + (c.espessura_cm / 100) * escala, 0);
+        let startY = totalAltura / 2;
+
+        camadas.forEach((c) => {
+            let espessura = (c.espessura_cm / 100) * escala;
+            let geom = new THREE.BoxGeometry(6, espessura, 6);
+            let colorInt = typeof c.cor === 'string' ? parseInt(c.cor.replace('#', '0x')) : c.cor;
+            let mat = new THREE.MeshPhongMaterial({color: colorInt, transparent: true, opacity: 0.9});
+            let bloco = new THREE.Mesh(geom, mat);
+            bloco.position.y = startY - yAtual - (espessura / 2);
+            cena.add(bloco);
+            
+            let edges = new THREE.EdgesGeometry(geom);
+            let line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0x00f0ff}));
+            line.position.y = bloco.position.y;
+            cena.add(line);
+            yAtual += espessura;
         });
+
+        legenda.innerHTML = camadas.map(c => 
+            `<div style="display:flex; align-items:center; margin-bottom:5px; background:rgba(255,255,255,0.1); padding:5px; border-radius:4px;">
+                <div style="width:15px; height:15px; background:${c.cor}; margin-right:10px; border-radius:3px; border:1px solid #fff;"></div>
+                <span style="color:#fff;">${c.tipo} (${c.profundidade_cm}cm a ${c.profundidade_cm + c.espessura_cm}cm)</span>
+            </div>`
+        ).join('');
+
         function animar() { if (document.getElementById('modal3D').style.display === 'none') return; requestAnimationFrame(animar); cena.rotation.y += 0.005; renderer.render(cena, camera); }
         animar();
-    }, 200);
+    }, 150);
 }
