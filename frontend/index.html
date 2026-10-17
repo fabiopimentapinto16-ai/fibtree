@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Olho de Deus Sênior</title>
+    <title>Olho de Deus</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -26,16 +28,15 @@
             <div class="score-classif" id="score-classif">-</div>
             <div class="score-type" id="score-type">-</div>
             <div class="score-breakdown" id="score-breakdown">Ouro: 0 | ETR: 0</div>
-            <img id="mineral-image" src="" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none;">
+            <img id="mineral-image" src="" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #00f0ff; display: none;" alt="Minério">
         </div>
 
         <div id="lista-processos" class="processos-container" style="display:none;">
-            <h3>📋 Processos SIGMINE</h3>
+            <h3>📋 Processos Próximos</h3>
             <div id="processos-content"></div>
         </div>
 
         <hr>
-        <button onclick="gerarRequerimento()" style="background: #00ff88; color: #000; font-weight: bold;">📝 GERAR REQUERIMENTO ANM</button>
         <button onclick="gerarPDF()">📄 GERAR PDF</button>
         <button onclick="gerarMemorial()">📋 MEMORIAL DESCRITIVO</button>
         <button onclick="exportarKML()">🌍 EXPORTAR KML</button>
@@ -43,20 +44,27 @@
         <button onclick="exportarCSV()">📊 EXPORTAR CSV</button>
         <button onclick="ativarModoAmostra()">📍 MARCAR AMOSTRA</button>
         <button onclick="abrirModalRota()">🛣️ ROTA / MAPA</button>
-        <button onclick="toggleCPRM()" style="color:#00f0ff; border-color:#00f0ff;">🗺️ MAPA GEOLÓGICO CPRM</button>
         <button onclick="ativarDetectorismo()" style="color:#00ff88; border-color:#00ff88;">⛏ DETECTORISMO</button>
         <button onclick="abrir3D()" style="color:#ffcc00; border-color:#ffcc00;">📦 SIMULAÇÃO 3D</button>
+    </div>
+
+    <div id="modalHistorico" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal('modalHistorico')">&times;</span>
+            <h2>Histórico de Análises</h2>
+            <div id="listaHistorico"></div>
+        </div>
     </div>
 
     <div id="modal3D" class="modal">
         <div class="modal-content" style="height: 85%; max-width: 800px; display: flex; flex-direction: column;">
             <span class="close" onclick="fecharModal('modal3D')">&times;</span>
-            <h2 style="color:#ffcc00; margin-top:0;">Simulação 3D (SRTM + Solo)</h2>
-            <p style="font-size:12px; color:#aaa;">Toque no bloco para ver os detalhes.</p>
-            <div id="canvas3d" style="flex: 1; width: 100%; min-height: 250px; background: #000; border-radius: 8px;"></div>
-            <div id="layer-info" style="margin-top: 10px; padding: 10px; background: rgba(0,240,255,0.1); border: 1px solid #00f0ff; border-radius: 5px; display: none;">
-                <h4 id="info-title" style="color:#00f0ff; margin: 0 0 5px 0;"></h4>
-                <p id="info-desc" style="font-size: 13px; margin: 0;"></p>
+            <h2 style="color:#ffcc00; margin-top:0;">Simulação 3D (Estimativa)</h2>
+            <p style="font-size:12px; color:#aaa; margin-bottom:5px;">Toque no bloco para ver a estimativa da camada.</p>
+            <div id="canvas3d" style="flex: 1; width: 100%; min-height: 250px; background: #000; border-radius: 8px; position: relative; cursor: pointer;"></div>
+            <div id="layer-info" style="margin-top: 10px; padding: 10px; background: rgba(0,240,255,0.1); border: 1px solid #00f0ff; border-radius: 5px; color: #fff; display: none;">
+                <h4 id="info-title" style="color:#00f0ff; margin: 0 0 5px 0;">Título</h4>
+                <p id="info-desc" style="font-size: 13px; margin: 0;">Descrição da camada.</p>
             </div>
         </div>
     </div>
@@ -66,6 +74,11 @@
             <span class="close" onclick="fecharModal('modalRota')">&times;</span>
             <h2 style="color:#00f0ff; margin-top:0;">Mapa e Rota</h2>
             <div id="mapRota" style="flex: 1; width: 100%; min-height: 250px; border-radius: 8px;"></div>
+            <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                <button onclick="trocarCamadaRota('sat')" style="flex:1; font-size:12px;">Satélite</button>
+                <button onclick="trocarCamadaRota('falsecolor')" style="flex:1; font-size:12px;">Falsa Cor (NASA)</button>
+                <button onclick="trocarCamadaRota('heat')" style="flex:1; font-size:12px;">Calor</button>
+            </div>
             <button onclick="criarRotaGoogleMaps()" style="margin-top:10px; background:#ff6400; color:#fff; border:none; padding:12px; font-weight:bold;">Abrir Rota no Google Maps</button>
         </div>
     </div>
