@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 """API Flask - Grãos de Ouro"""
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
