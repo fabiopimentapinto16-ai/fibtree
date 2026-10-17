@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, jsonify, request, send_file
+from flask import Flask, send_from_directory
 import os, sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -11,22 +11,15 @@ app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
 def index():
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
+# Puxa todas as rotas (PDF, Memorial, KML, SIGMINE, 3D) do backend original
 try:
-    from regras import calcular_score
-    BACKEND_OK = True
+    from backend.app import app as backend_app
+    # Copia as rotas do backend para o app principal
+    for rule in backend_app.url_map.iter_rules():
+        if rule.endpoint != 'static' and rule.rule != '/':
+            app.add_url_rule(rule.rule, rule.endpoint, backend_app.view_functions[rule.endpoint], methods=rule.methods)
 except Exception as e:
-    print("Erro regras:", e)
-    BACKEND_OK = False
-
-@app.route('/api/analisar', methods=['POST'])
-def analisar():
-    d = request.get_json()
-    if BACKEND_OK:
-        try:
-            return jsonify(calcular_score(float(d['lat']), float(d['lng'])))
-        except Exception as e:
-            return jsonify({"erro": str(e)}), 500
-    return jsonify({"score_final": 50, "classificacao": "SIMULAÇÃO", "tipo_principal": "ouro"})
+    print("Aviso: Backend original não carregado completamente:", e)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
