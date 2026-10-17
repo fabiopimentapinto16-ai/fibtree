@@ -1,3 +1,7 @@
+import os
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_FRONTEND_DIR = os.path.join(_BASE_DIR, 'frontend')
+
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +20,7 @@ try:
 except ImportError:
     COMPRESS_DISPONIVEL = False
 
-app = Flask(__name__, static_folder='../frontend', static_url_path='')
+app = Flask(__name__, static_folder=_FRONTEND_DIR, static_url_path='')
 CORS(app)
 
 if COMPRESS_DISPONIVEL:
@@ -28,7 +32,7 @@ def health():
     return jsonify({"status": "ok", "app": "Graos de Ouro"})
 
 @app.route('/')
-def index(): return send_from_directory('../frontend', 'index.html')
+def index(): return send_from_directory(_FRONTEND_DIR, 'index.html')
 
 @app.route('/api/analisar', methods=['POST'])
 def analisar():
