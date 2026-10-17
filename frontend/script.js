@@ -179,3 +179,22 @@ async function abrir3D() {
         animar();
     }, 150);
 }
+
+
+let cprmLayer = null;
+function toggleCPRM() {
+    if (cprmLayer) {
+        map.removeLayer(cprmLayer);
+        cprmLayer = null;
+        alert('Camada de Falhas CPRM Desativada');
+    } else {
+        cprmLayer = L.tileLayer.wms('https://geoportal.cprm.gov.br/geoserver/wms', {
+            layers: 'geologia:estruturas_lineares',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.8,
+            attribution: 'CPRM'
+        }).addTo(map);
+        alert('Camada de Falhas CPRM Ativada! Estruturas lineares carregadas diretamente do banco oficial.');
+    }
+}
