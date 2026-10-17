@@ -1,23 +1,33 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, jsonify, request, send_file
+from flask_cors import CORS
 import os, sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
-sys.path.append(os.path.join(BASE_DIR, 'backend'))
-
-app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
+app = Flask(__name__, static_folder='frontend', static_url_path='')
+CORS(app)
 
 @app.route('/')
-def index():
-    return send_from_directory(FRONTEND_DIR, 'index.html')
+def index(): return send_from_directory('frontend', 'index.html')
 
+sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
 try:
-    from backend.app import app as backend_app
-    for rule in backend_app.url_map.iter_rules():
-        if rule.endpoint != 'static' and rule.rule != '/':
-            app.add_url_rule(rule.rule, rule.endpoint, backend_app.view_functions[rule.endpoint], methods=rule.methods)
+    from backend.regras import calcular_score
+    from backend.pdf_generator import gerar_pdf
+    BACKEND_OK = True
 except Exception as e:
-    print("Aviso Backend:", e)
+    print("Erro ao conectar backend:", e)
+    BACKEND_OK = False
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+@app.route('/api/analisar', methods=['POST'])
+def analisar():
+    d = request.get_json()
+    if BACKEND_OK: return jsonify(calcular_score(float(d['lat']), float(d['lng'])))
+    return jsonify({"score_final": 50, "classificacao": "SIMULAÇÃO", "tipo_principal": "ouro"})
+
+@app.route('/api/gerar-pdf', methods=['POST'])
+def route_pdf():
+    if BACKEND_OK:
+        c = "/tmp/rel.pdf"; gerar_pdf(request.get_json(), c)
+        return send_file(c, as_attachment=True, download_name='relatorio.pdf')
+    return jsonify({"erro": "Falhou"}), 500
+
+if __name__ == '__main__': app.run(host='0.0.0.0', port=5000)
