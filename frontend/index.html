@@ -2,20 +2,33 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Olho de Deus</title>
+    
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Bibliotecas JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="map"></div>
+    
     <div class="panel">
         <h2>OLHO DE DEUS</h2>
         <button onclick="ativarGPS()">📍 ATIVAR GPS</button>
         <input type="number" id="lat" placeholder="Latitude" step="0.000001">
         <input type="number" id="lng" placeholder="Longitude" step="0.000001">
         <button id="btn-analisar" class="primary" onclick="analisar()">🔍 ANALISAR POTENCIAL</button>
+        
         <div id="resultado"></div>
         <hr>
         <button onclick="gerarPDF()">📄 GERAR PDF</button>
@@ -28,9 +41,24 @@
         <button onclick="ativarDetectorismo()" style="color:#00ff88; border-color:#00ff88;">⛏ DETECTORISMO</button>
         <button onclick="abrir3D()" style="color:#ffcc00; border-color:#ffcc00;">📦 SIMULAÇÃO 3D</button>
     </div>
-    <div id="modalHistorico" class="modal"><div class="modal-content"><span class="close" onclick="fecharModal('modalHistorico')">&times;</span><h2>Histórico</h2><div id="listaHistorico"></div></div></div>
-    <div id="modal3D" class="modal"><div class="modal-content" style="height: 80%; display: flex; flex-direction: column;"><span class="close" onclick="fecharModal('modal3D')">&times;</span><h2>Simulação 3D</h2><div id="canvas3d" style="flex: 1; background: #000; border-radius: 4px; overflow: hidden;"></div></div></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Modais -->
+    <div id="modalHistorico" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal('modalHistorico')">&times;</span>
+            <h2>Histórico de Análises</h2>
+            <div id="listaHistorico"></div>
+        </div>
+    </div>
+
+    <div id="modal3D" class="modal">
+        <div class="modal-content" style="height: 80%; max-width: 800px; display: flex; flex-direction: column;">
+            <span class="close" onclick="fecharModal('modal3D')">&times;</span>
+            <h2 style="color:#ffcc00; margin-top:0;">Simulação 3D do Subsolo</h2>
+            <div id="canvas3d" style="flex: 1; width: 100%; min-height: 300px; background: #000; border-radius: 8px;"></div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
