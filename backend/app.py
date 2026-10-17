@@ -25,8 +25,7 @@ def health():
     return jsonify({"status": "ok", "app": "Graos de Ouro"})
 
 @app.route('/')
-def index():
-    return send_from_directory('../frontend', 'index.html')
+def index(): return send_from_directory('../frontend', 'index.html')
 
 @app.route('/api/analisar', methods=['POST'])
 def analisar():
