@@ -1,6 +1,6 @@
 body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #05080f; color: #fff; }
 #map { position: absolute; top: 0; left: 0; width: 80%; height: 100vh; z-index: 1; }
-.panel { position: absolute; top: 0; right: 0; width: 20%; height: 100vh; background: #0a1420; padding: 15px; box-sizing: border-box; overflow-y: auto; z-index: 1000; border-left: 1px solid #00f0ff; }
+.panel { position: absolute; top: 0; right: 0; width: 20%; height: 100vh; background: #0a1420; padding: 15px; box-sizing: border-box; overflow-y: auto; z-index: 1000; border-left: 1px solid #00f0ff; padding-bottom: 50px; }
 h2 { color: #00f0ff; text-align: center; font-size: 18px; margin-top: 0; }
 input { width: 100%; padding: 10px; margin: 5px 0 15px; background: #111; border: 1px solid #333; color: #fff; box-sizing: border-box; border-radius: 4px; }
 button { width: 100%; padding: 12px; margin-bottom: 8px; background: #111; color: #fff; border: 1px solid #444; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
@@ -10,5 +10,19 @@ hr { border: 0; border-top: 1px solid #333; margin: 15px 0; }
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; align-items: center; justify-content: center; }
 .modal-content { background: #0a1420; padding: 20px; border: 1px solid #00f0ff; width: 90%; max-width: 600px; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
 .close { color: #fff; float: right; font-size: 24px; cursor: pointer; }
-.result-box { background: rgba(0,240,255,0.1); padding: 12px; margin-top: 15px; border-radius: 4px; border-left: 4px solid #00f0ff; font-size: 14px; }
-@media (max-width: 768px) { #map { width: 100%; height: 50vh; } .panel { width: 100%; height: 50vh; top: 50vh; border-left: none; border-top: 1px solid #00f0ff; } }
+.score-card { background: linear-gradient(135deg, #0a1420, #162c42); border: 1px solid #00f0ff; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 15px; box-shadow: 0 0 20px rgba(0,240,255,0.2); }
+.score-circle { width: 90px; height: 90px; border-radius: 50%; border: 4px solid #ffcc00; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; background: rgba(0,0,0,0.5); }
+.score-value { font-size: 32px; font-weight: 900; color: #ffcc00; }
+.score-label { font-size: 14px; color: #fff; margin-left: 2px; }
+.score-classif { font-size: 18px; font-weight: bold; color: #00f0ff; text-transform: uppercase; }
+.score-type { font-size: 16px; margin-top: 5px; font-weight: bold; }
+.score-breakdown { font-size: 12px; color: #aaa; margin-top: 5px; }
+.processos-container { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; margin-bottom: 15px; max-height: 200px; overflow-y: auto; border: 1px solid #333; }
+.processos-container h3 { font-size: 14px; color: #ffcc00; margin: 0 0 10px 0; }
+.processo-item { border-bottom: 1px solid #333; padding: 8px 0; font-size: 12px; }
+.processo-item:last-child { border-bottom: none; }
+.processo-item strong { color: #00ff88; }
+@media (max-width: 768px) { 
+    #map { width: 100%; height: 50vh; } 
+    .panel { width: 100%; height: 50vh; top: 50vh; border-left: none; border-top: 1px solid #00f0ff; } 
+}

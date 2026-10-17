@@ -3,25 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Olho de Deus</title>
-    
-    <!-- Leaflet CSS -->
+    <title>Olho de Deus - Prospecção Mineral</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- MarkerCluster CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Bibliotecas JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.fullscreen@2.4.0/Control.FullScreen.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="map"></div>
-    
     <div class="panel">
         <h2>OLHO DE DEUS</h2>
         <button onclick="ativarGPS()">📍 ATIVAR GPS</button>
@@ -29,7 +23,19 @@
         <input type="number" id="lng" placeholder="Longitude" step="0.000001">
         <button id="btn-analisar" class="primary" onclick="analisar()">🔍 ANALISAR POTENCIAL</button>
         
-        <div id="resultado"></div>
+        <div id="score-card" class="score-card" style="display:none;">
+            <div class="score-circle"><span class="score-value" id="score-value">0</span><span class="score-label">/100</span></div>
+            <div class="score-classif" id="score-classif">-</div>
+            <div class="score-type" id="score-type">-</div>
+            <div class="score-breakdown" id="score-breakdown">Ouro: 0 | ETR: 0</div>
+            <img id="mineral-image" src="" style="width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #00f0ff; display: none;">
+        </div>
+
+        <div id="lista-processos" class="processos-container" style="display:none;">
+            <h3>📋 Processos Próximos</h3>
+            <div id="processos-content"></div>
+        </div>
+
         <hr>
         <button onclick="gerarPDF()">📄 GERAR PDF</button>
         <button onclick="gerarMemorial()">📋 MEMORIAL DESCRITIVO</button>
@@ -37,7 +43,7 @@
         <button onclick="abrirHistorico()">📜 HISTÓRICO</button>
         <button onclick="exportarCSV()">📊 EXPORTAR CSV</button>
         <button onclick="ativarModoAmostra()">📍 MARCAR AMOSTRA</button>
-        <button onclick="toggleRota()">🛣️ ROTA OSRM</button>
+        <button onclick="abrirModalRota()">🛣️ ROTA / MAPA</button>
         <button onclick="ativarDetectorismo()" style="color:#00ff88; border-color:#00ff88;">⛏ DETECTORISMO</button>
         <button onclick="abrir3D()" style="color:#ffcc00; border-color:#ffcc00;">📦 SIMULAÇÃO 3D</button>
     </div>
@@ -56,6 +62,20 @@
             <span class="close" onclick="fecharModal('modal3D')">&times;</span>
             <h2 style="color:#ffcc00; margin-top:0;">Simulação 3D do Subsolo</h2>
             <div id="canvas3d" style="flex: 1; width: 100%; min-height: 300px; background: #000; border-radius: 8px;"></div>
+        </div>
+    </div>
+
+    <div id="modalRota" class="modal">
+        <div class="modal-content" style="height: 85%; max-width: 800px; display: flex; flex-direction: column;">
+            <span class="close" onclick="fecharModal('modalRota')">&times;</span>
+            <h2 style="color:#00f0ff; margin-top:0;">Mapa e Rota</h2>
+            <div id="mapRota" style="flex: 1; width: 100%; min-height: 250px; border-radius: 8px;"></div>
+            <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap;">
+                <button onclick="trocarCamadaRota('sat')" style="flex:1; font-size:12px;">Satélite</button>
+                <button onclick="trocarCamadaRota('falsecolor')" style="flex:1; font-size:12px;">Falsa Cor (NASA)</button>
+                <button onclick="trocarCamadaRota('heat')" style="flex:1; font-size:12px;">Calor</button>
+            </div>
+            <button onclick="criarRotaGoogleMaps()" style="margin-top:10px; background:#ff6400; color:#fff; border:none; padding:12px; font-weight:bold;">Abrir Rota no Google Maps</button>
         </div>
     </div>
 
