@@ -105,7 +105,7 @@ async function abrir3D() {
     document.getElementById('layer-info').style.display = 'none'; 
     
     let container = document.getElementById('canvas3d');
-    container.innerHTML = '<div style="color:#fff; text-align:center; padding-top:100px;">Carregando simulação...</div>';
+    container.innerHTML = '<div style="color:#fff; text-align:center; padding-top:100px;">Carregando...</div>';
 
     let camadas = [];
     try {
