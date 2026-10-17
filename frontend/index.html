@@ -60,8 +60,12 @@
         <div class="modal-content" style="height: 85%; max-width: 800px; display: flex; flex-direction: column;">
             <span class="close" onclick="fecharModal('modal3D')">&times;</span>
             <h2 style="color:#ffcc00; margin-top:0;">Simulação 3D do Subsolo</h2>
-            <div id="canvas3d" style="flex: 1; width: 100%; min-height: 250px; background: #000; border-radius: 8px; position: relative;"></div>
-            <div id="legenda3d" style="margin-top: 10px; font-size: 12px; max-height: 120px; overflow-y: auto;"></div>
+            <p style="font-size:12px; color:#aaa; margin-bottom:5px;">Toque no bloco para ver os detalhes da camada.</p>
+            <div id="canvas3d" style="flex: 1; width: 100%; min-height: 250px; background: #000; border-radius: 8px; position: relative; cursor: pointer;"></div>
+            <div id="layer-info" style="margin-top: 10px; padding: 10px; background: rgba(0,240,255,0.1); border: 1px solid #00f0ff; border-radius: 5px; color: #fff; display: none;">
+                <h4 id="info-title" style="color:#00f0ff; margin: 0 0 5px 0;">Título</h4>
+                <p id="info-desc" style="font-size: 13px; margin: 0;">Descrição da camada.</p>
+            </div>
         </div>
     </div>
 
