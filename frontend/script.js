@@ -168,10 +168,14 @@ async function abrir3D() {
         raycaster = new THREE.Raycaster();
         mouse = new THREE.Vector2();
         
-        renderer3D.domElement.addEventListener('click', (event) => {
+        renderer3D.domElement.addEventListener('pointerdown', (event) => {
+            event.preventDefault(); 
             const rect = renderer3D.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            cena3D.updateMatrixWorld(true);
+            camera3D.updateMatrixWorld(true);
 
             raycaster.setFromCamera(mouse, camera3D);
             const intersects = raycaster.intersectObjects(blocos3D);
