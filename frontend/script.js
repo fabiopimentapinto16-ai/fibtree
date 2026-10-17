@@ -1,22 +1,19 @@
 let map, radarLayers = [], rotaLayer = null, modoAmostra = false, modoDetector = false;
 map = L.map('map').setView([-15, -50], 4);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
-
 map.on('click', function(e) {
     let lat = e.latlng.lat.toFixed(6), lng = e.latlng.lng.toFixed(6);
     document.getElementById('lat').value = lat; document.getElementById('lng').value = lng;
     if (modoAmostra) { L.marker([lat, lng]).addTo(map).bindPopup('Amostra').openPopup(); modoAmostra = false; return; }
-    if (modoDetector) { L.circle([lat, lng], { radius: 500, color: '#00ff88', dashArray: '5,5' }).addTo(map); alert("⛏ MODO DETECTOR ATIVADO! Procure aluviões nas margens."); modoDetector = false; return; }
+    if (modoDetector) { L.circle([lat, lng], { radius: 500, color: '#00ff88', dashArray: '5,5' }).addTo(map); alert("MODO DETECTOR ATIVADO!"); modoDetector = false; return; }
     desenharRadar(lat, lng);
 });
-
 function desenharRadar(lat, lng) {
     radarLayers.forEach(l => map.removeLayer(l)); radarLayers = [];
     let raios = [5000, 4000, 3000, 2000, 1000], cores = ["#ff0000", "#ff3300", "#ff6600", "#ff9900", "#ffcc00"];
     raios.forEach((r, i) => radarLayers.push(L.circle([lat, lng], { radius: r, color: cores[i], fillOpacity: 0.2, weight: 1 }).addTo(map)));
     map.setView([lat, lng], 12);
 }
-
 async function analisar() {
     let lat = document.getElementById('lat').value, lng = document.getElementById('lng').value;
     if (!lat || !lng) return alert('Preencha as coordenadas');
@@ -31,7 +28,6 @@ async function analisar() {
     } catch (e) { alert('Erro: ' + e.message); }
     btn.innerText = '🔍 ANALISAR POTENCIAL';
 }
-
 function abrirHistorico() { let h = JSON.parse(localStorage.getItem('historico') || '[]'); document.getElementById('listaHistorico').innerHTML = h.length ? h.map(x => `<div>Lat: ${x.lat} | Score: ${x.score}</div>`).join('') : '<p>Vazio</p>'; document.getElementById('modalHistorico').style.display = 'flex'; }
 function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 function exportarCSV() { let h = JSON.parse(localStorage.getItem('historico') || '[]'); if(!h.length) return; let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['Lat,Lng,Score\n' + h.map(x => `${x.lat},${x.lng},${x.score}`).join('\n')], {type: 'text/csv'})); a.download = 'hist.csv'; a.click(); }
