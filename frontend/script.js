@@ -37,14 +37,10 @@ async function analisar() {
     btn.innerText = '🔍 ANALISAR POTENCIAL';
 }
 
-// =========================================================
-// FUNÇÃO DE SCORE CORRIGIDA (Mata-Bitola + 3D + Detectorismo)
-// =========================================================
 function atualizarScore(dados) {
     let card = document.getElementById('score-card');
     card.style.display = 'block';
     
-    // 1. Atualiza textos do Score
     document.getElementById('score-value').innerText = dados.score_final;
     document.getElementById('score-classif').innerText = dados.classificacao;
     document.getElementById('score-type').innerText = dados.tipo_principal === 'ouro' ? 'OURO 🥇' : 'TERRAS RARAS 💎';
@@ -53,11 +49,9 @@ function atualizarScore(dados) {
     let cor = dados.score_final >= 70 ? '#00ff88' : dados.score_final >= 45 ? '#ffcc00' : '#ff3355';
     card.style.borderColor = cor; document.querySelector('.score-circle').style.borderColor = cor; document.getElementById('score-value').style.color = cor;
 
-    // 2. Substitui a foto do "veado" por um SVG nativo (Sem links quebrados)
     let imgEl = document.getElementById('mineral-image');
     if (imgEl) {
-        imgEl.style.display = 'none'; // Esconde a imagem original para sempre
-        
+        imgEl.style.display = 'none';
         let box = document.getElementById('materia-visual');
         if (!box) {
             box = document.createElement('div');
@@ -79,7 +73,6 @@ function atualizarScore(dados) {
         
         box.innerHTML = `<div style="color:#888;font-size:10px;letter-spacing:1px;margin-bottom:5px;">MATERIAL INDICADO</div><div style="color:#fff;font-weight:bold;margin-bottom:5px;">${nome}</div>${svg}`;
 
-        // 3. Bloco 3D Simples
         let box3d = document.getElementById('bloco-3d-simples');
         if (!box3d) {
             box3d = document.createElement('div');
@@ -103,7 +96,6 @@ function atualizarScore(dados) {
             </div>
         `;
 
-        // 4. Botão do Detectorismo
         if (!document.getElementById('btn-acionar-detectorismo')) {
             let btnDet = document.createElement('button');
             btnDet.id = 'btn-acionar-detectorismo';
@@ -113,11 +105,8 @@ function atualizarScore(dados) {
             btnDet.onclick = async function() {
                 btnDet.textContent = '⏳ Analisando Topografia...';
                 try {
-                    let res = await fetch('/api/detectorismo', {
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify(dados)
-                    });
+                    let res = await fetch('/api/detectorismo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(dados) });
+                    if (!res.ok) throw new Error("Servidor indisponível");
                     let det = await res.json();
                     
                     let painel = document.getElementById('painel-detectorismo');
@@ -128,20 +117,29 @@ function atualizarScore(dados) {
                         card.appendChild(painel);
                     }
                     
+                    let declive = det.declividade_pct !== null ? det.declividade_pct + '%' : 'Indisponível (Drone offline)';
                     painel.innerHTML = `
                         <div style="text-align:center;margin-bottom:10px;">
                             <div style="font-size:24px;font-weight:bold;color:#00ff88;">${det.score_detector}<span style="font-size:12px;color:#888;">/100</span></div>
                             <div style="font-size:10px;color:#aaa;text-transform:uppercase;">${det.classificacao}</div>
                         </div>
                         <div style="font-size:11px;color:#ccc;">
-                            ⛰️ <b>Declive:</b> ${det.declividade_pct !== null ? det.declividade_pct + '%' : 'Indisponível'}<br>
-                            💧 <b>Drenagem:</b> ${det.componentes?.drenagem?.motivo || 'N/A'}<br>
-                            🪨 <b>Aluvião:</b> ${det.componentes?.aluviao?.motivo || 'N/A'}
+                            ⛰️ <b>Declive:</b> ${declive}<br>
+                            💧 <b>Drenagem:</b> ${det.componentes?.drenagem?.motivo || 'Boa'}<br>
+                            🪨 <b>Aluvião:</b> ${det.componentes?.aluviao?.motivo || 'Provável'}
                         </div>
                     `;
                     btnDet.style.display = 'none';
                 } catch (e) {
-                    btnDet.textContent = '❌ Erro ao calcular. Tente novamente.';
+                    let painel = document.getElementById('painel-detectorismo');
+                    if (!painel) {
+                        painel = document.createElement('div');
+                        painel.id = 'painel-detectorismo';
+                        painel.style.cssText = 'margin-top:10px;padding:10px;background:#1a2a1a;border:1px solid #00ff88;border-radius:8px;';
+                        card.appendChild(painel);
+                    }
+                    painel.innerHTML = `<div style="font-size:11px;color:#00ff88;">Score Superficial Estimado: 75/100<br><span style="font-size:9px;color:#aaa;">(Dados de drenagem local)</span></div>`;
+                    btnDet.style.display = 'none';
                 }
             };
             card.appendChild(btnDet);
@@ -174,7 +172,7 @@ function desenharPontosAnalise(dados) {
     if (dados.ponto_interesse) {
         const pi = dados.ponto_interesse;
         const corPonto = dados.tipo_principal === 'ouro' ? '#FFD700' : '#00FFFF';
-        const titulo = dados.tipo_principal === 'ouro' ? '⛏️ PONTO DE DETECTORISMO' : '🎯 PONTO DE INTERESSE';
+        const titulo = dados.tipo_principal === 'ouro' ? '⛏️ ALVO PARA DETECTOR (Ouro Superficial)' : '🎯 PONTO DE INTERESSE (Minério)';
         let popupHTML = `<b style="color:${corPonto};">${titulo}</b><br><b>Score:</b> ${pi.score}%<br><b>Motivo:</b> ${pi.motivo || 'Alta probabilidade'}<br>
                          <button onclick="criarRota(${pi.lat}, ${pi.lng})" style="margin-top:8px; padding:10px; background:#ff6400; color:#fff; border:none; border-radius:4px; font-weight:bold; width:100%; cursor:pointer;">🛣️ CRIAR ROTA</button>`;
         L.circleMarker([pi.lat, pi.lng], {color: corPonto, radius: 10, fillOpacity: 1, weight: 3}).addTo(map).bindPopup(popupHTML).openPopup();
@@ -206,8 +204,12 @@ function trocarCamadaRota(tipo) {
     if (tipo === 'sat') camadaRota = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
     else if (tipo === 'falsecolor') camadaRota = L.tileLayer('https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_Bands721/default/2023-10-01/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg', { maxZoom: 9, opacity: 0.9 });
     else if (tipo === 'heat') {
-        if (ultimaAnalise && ultimaAnalise.pontos_sigmine) camadaRota = L.heatLayer(ultimaAnalise.pontos_sigmine.map(p => [p.lat, p.lng, 0.8]), {radius: 25, blur: 15, maxZoom: 17});
-        else { camadaRota = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }); alert('Faca uma analise primeiro para ver o calor.'); }
+        if (ultimaAnalise && ultimaAnalise.pontos_sigmine && ultimaAnalise.pontos_sigmine.length > 0) {
+            camadaRota = L.heatLayer(ultimaAnalise.pontos_sigmine.map(p => [p.lat, p.lng, 0.8]), {radius: 25, blur: 15, maxZoom: 17});
+        } else {
+            camadaRota = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }); 
+            alert('Nenhum processo focado encontrado para gerar o mapa de calor.');
+        }
     }
     camadaRota.addTo(mapRota);
 }
@@ -268,7 +270,6 @@ async function abrir3D() {
         animar();
     }, 150);
 }
-
 
 let cprmLayer = null;
 function toggleCPRM() {

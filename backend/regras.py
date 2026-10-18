@@ -29,18 +29,13 @@ def calcular_score(lat, lng):
     evidencias_ouro = []
     evidencias_etr = []
     
-    # 1. Busca por depósitos conhecidos (raio de 5km)
     pontos_proximos = []
     for r in REGIOES:
         dist = calcular_distancia_km(lat, lng, r["lat"], r["lng"])
         if dist <= 5.0:
             pontos_proximos.append({
-                "nome": r["nome"],
-                "tipo": r["tipo"],
-                "distancia_km": round(dist, 2),
-                "lat": r["lat"],
-                "lng": r["lng"],
-                "facilidade": r["facilidade"]
+                "nome": r["nome"], "tipo": r["tipo"], "distancia_km": round(dist, 2),
+                "lat": r["lat"], "lng": r["lng"], "facilidade": r["facilidade"]
             })
             peso = 50 if dist < 1 else (30 if dist < 3 else 15)
             if r["tipo"] == "ouro":
@@ -50,53 +45,48 @@ def calcular_score(lat, lng):
                 score_etr += peso
                 evidencias_etr.append(f"Proximidade de {r['nome']} ({dist:.1f} km)")
                 
-    # 2. Varredura SIGMINE (270.000 processos)
     pontos_sigmine = []
+    FOCO_MINERAL = ["OURO", "TERRAS RARAS", "ETR", "MONAZITA", "CASSITERITA", "ESTANHO", "SN", "TANTALITA", "NIOBIO"]
+    
     for s in DADOS_SIGMINE:
         dist_s = calcular_distancia_km(lat, lng, float(s["lat"]), float(s["lng"]))
         if dist_s <= 5.0:
+            subs = s.get("subs", "").upper()
             pontos_sigmine.append({
-                "processo": s.get("processo"),
-                "subs": s.get("subs"),
-                "fase": s.get("fase"),
-                "distancia_km": round(dist_s, 2),
-                "lat": float(s["lat"]),
-                "lng": float(s["lng"])
+                "processo": s.get("processo"), "subs": s.get("subs"), "fase": s.get("fase"),
+                "distancia_km": round(dist_s, 2), "lat": float(s["lat"]), "lng": float(s["lng"])
             })
-            if "OURO" in s.get("subs", "").upper():
-                score_ouro += 8
-                evidencias_ouro.append(f"Processo {s['processo']} ({s['subs']}) a {dist_s:.1f} km")
-            else:
-                score_etr += 8
-                evidencias_etr.append(f"Processo {s['processo']} ({s['subs']}) a {dist_s:.1f} km")
+            
+            if any(foco in subs for foco in FOCO_MINERAL):
+                if "OURO" in subs:
+                    score_ouro += 8
+                    evidencias_ouro.append(f"Processo {s['processo']} ({s['subs']}) a {dist_s:.1f} km")
+                else:
+                    score_etr += 8
+                    evidencias_etr.append(f"Processo {s['processo']} ({s['subs']}) a {dist_s:.1f} km")
                 
-    pontos_sigmine = sorted(pontos_sigmine, key=lambda x: x["distancia_km"])[:20]
+    pontos_sigmine = sorted(pontos_sigmine, key=lambda x: x["distancia_km"])
+    pontos_foco = [p for p in pontos_sigmine if any(foco in p["subs"].upper() for foco in FOCO_MINERAL)]
+    pontos_outros = [p for p in pontos_sigmine if p not in pontos_foco]
+    pontos_sigmine = pontos_foco + pontos_outros
     
     score_final = min(100, max(score_ouro, score_etr))
     tipo_principal = "ouro" if score_ouro >= score_etr else "ETR"
     
-    # Determina classificação
-    if score_final >= 70:
-        classificacao = "ALTO POTENCIAL"
-    elif score_final >= 45:
-        classificacao = "MEDIO POTENCIAL"
-    elif score_final >= 20:
-        classificacao = "BAIXO POTENCIAL"
-    else:
-        classificacao = "SEM INDICIOS"
+    if score_final >= 70: classificacao = "ALTO POTENCIAL"
+    elif score_final >= 45: classificacao = "MEDIO POTENCIAL"
+    elif score_final >= 20: classificacao = "BAIXO POTENCIAL"
+    else: classificacao = "SEM INDICIOS"
         
-    # Ponto de Interesse (Ponto Ideal)
     ponto_interesse = None
-    if pontos_sigmine:
+    if pontos_foco:
+        melhor = pontos_foco[0]
+        tipo_pi = "ouro" if "OURO" in melhor["subs"].upper() else "ETR"
         ponto_interesse = {
-            "lat": pontos_sigmine[0]["lat"],
-            "lng": pontos_sigmine[0]["lng"],
-            "score": score_final,
-            "tipo": tipo_principal,
-            "motivo": f"Foco em processo {pontos_sigmine[0]['processo']} de {pontos_sigmine[0]['subs']}"
+            "lat": melhor["lat"], "lng": melhor["lng"], "score": score_final, "tipo": tipo_pi,
+            "motivo": f"Foco em {melhor['subs']} (Processo {melhor['processo']})"
         }
         
-    # Camadas 3D do Subsolo
     camadas = [
         {"profundidade_cm": 0, "espessura_cm": 30, "tipo": "Solo Organico", "cor": "#8B7355"},
         {"profundidade_cm": 30, "espessura_cm": 40, "tipo": "Cascalho Aluvionar", "cor": "#A0522D"},
@@ -105,16 +95,9 @@ def calcular_score(lat, lng):
     ]
     
     return {
-        "score_final": score_final,
-        "classificacao": classificacao,
-        "tipo_principal": tipo_principal,
-        "score_ouro": min(100, score_ouro),
-        "score_etr": min(100, score_etr),
-        "evidencias_ouro": evidencias_ouro[:5],
-        "evidencias_etr": evidencias_etr[:5],
-        "pontos_proximos": pontos_proximos,
-        "pontos_sigmine": pontos_sigmine,
-        "ponto_interesse": ponto_interesse,
-        "camadas": camadas,
-        "coordenada": {"lat": lat, "lng": lng}
+        "score_final": score_final, "classificacao": classificacao, "tipo_principal": tipo_principal,
+        "score_ouro": min(100, score_ouro), "score_etr": min(100, score_etr),
+        "evidencias_ouro": evidencias_ouro[:5], "evidencias_etr": evidencias_etr[:5],
+        "pontos_proximos": pontos_proximos, "pontos_sigmine": pontos_sigmine[:20],
+        "ponto_interesse": ponto_interesse, "camadas": camadas, "coordenada": {"lat": lat, "lng": lng}
     }
