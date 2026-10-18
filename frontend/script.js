@@ -38,6 +38,7 @@ async function analisar() {
 }
 
 function atualizarScore(dados) {
+    olhoMateriaVisual(dados || ultimaAnalise);
     let card = document.getElementById('score-card');
     card.style.display = 'block';
     document.getElementById('score-value').innerText = dados.score_final;
@@ -197,4 +198,74 @@ function toggleCPRM() {
         }).addTo(map);
         alert('Camada de Falhas CPRM Ativada! Estruturas lineares carregadas diretamente do banco oficial.');
     }
+}
+
+
+
+// --- INJEÇÃO CIRÚRGICA: IMAGEM DO MINÉRIO E MATA-BITOLA ---
+function olhoMateriaVisual(analise) {
+    let card = document.getElementById('score-card');
+    if (!card) return;
+    
+    // Remove qualquer imagem de avatar
+    card.querySelectorAll('img').forEach(img => {
+        if (/avatar|user|perfil|unsplash|pexels|analista|homem|man|person/i.test(img.src + ' ' + img.alt)) {
+            img.remove();
+        }
+    });
+
+    let box = document.getElementById('materia-visual');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'materia-visual';
+        box.style.cssText = 'margin-top:10px;padding:15px;background:#0a0a0a;border:1px solid #333;border-radius:8px;text-align:center;';
+        card.appendChild(box);
+    }
+    
+    let tipo = (analise.tipo_principal || analise.substancia || '').toLowerCase();
+    let svg = '', nome = '';
+    
+    if (tipo.includes('terra') || tipo.includes('rara')) {
+        nome = 'TERRAS RARAS'; 
+        svg = '<svg width="80" height="80" viewBox="0 0 80 80"><polygon points="30,20 45,15 50,40 35,48" fill="#FF6B9D"/><polygon points="45,25 62,22 65,50 48,55" fill="#4FC3F7"/><polygon points="20,40 35,35 38,62 22,65" fill="#AED581"/></svg>';
+    } else if (tipo.includes('ferro')) {
+        nome = 'FERRO'; 
+        svg = '<svg width="80" height="80" viewBox="0 0 80 80"><polygon points="15,50 25,25 45,18 62,30 65,55 50,68 28,65" fill="#C73E1D"/></svg>';
+    } else if (tipo.includes('argila')) {
+        nome = 'ARGILA'; 
+        svg = '<svg width="80" height="80" viewBox="0 0 80 80"><path d="M20,55 Q18,35 35,25 Q52,18 62,30 Q72,42 65,58 Q55,68 38,65 Q22,62 20,55 Z" fill="#D4B896"/></svg>';
+    } else {
+        nome = 'OURO'; 
+        svg = '<svg width="80" height="80" viewBox="0 0 80 80"><path d="M20,45 Q15,30 30,22 Q45,15 58,22 Q70,30 65,45 Q68,58 55,65 Q40,70 28,63 Q15,58 20,45 Z" fill="#FFD700" stroke="#5C4308" stroke-width="2"/></svg>';
+    }
+    
+    box.innerHTML = `<div style="color:#888;font-size:10px;letter-spacing:1px;margin-bottom:5px;">MATERIAL INDICADO</div><div style="color:#fff;font-weight:bold;margin-bottom:5px;">${nome}</div>${svg}`;
+
+    // A) BLOCO 3D (2 metros acima e camadas)
+    let box3d = document.getElementById('bloco-3d-simples');
+    if (!box3d) {
+        box3d = document.createElement('div');
+        box3d.id = 'bloco-3d-simples';
+        box3d.style.cssText = 'margin-top:10px;padding:10px;background:#111;border:1px solid #444;border-radius:8px;';
+        card.appendChild(box3d);
+    }
+    
+    let score = analise.score_final || 0;
+    let profundidade = score > 80 ? 'Raso (0-2m)' : score > 50 ? 'Médio (2-5m)' : 'Profundo (>5m)';
+    
+    box3d.innerHTML = `
+        <div style="color:#00ff88;font-size:11px;font-weight:bold;margin-bottom:5px;">📦 PERFIL 3D ESTIMADO</div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;border-bottom:1px solid #333;padding-bottom:4px;">
+            <span>Camada</span><span>Profundidade</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#fff;padding:4px 0;">
+            <span>Solo</span><span>0m - 0.5m</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#FFD700;padding:4px 0;">
+            <span>Minério (Estimado)</span><span>${profundidade}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;padding:4px 0;">
+            <span>Rocha Base</span><span>Abaixo do minério</span>
+        </div>
+    `;
 }
