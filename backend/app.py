@@ -153,6 +153,9 @@ def gerar_requerimento_endpoint():
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
 
+
+
+
 try:
     from detectorismo import bp_detector
     app.register_blueprint(bp_detector)

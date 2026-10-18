@@ -6,7 +6,6 @@ _PAT = re.compile(r'<img[^>]*(?:src|alt)\s*=\s*["\'][^"\']*(?:avatar|perfil|user
 def _aplicar(resp):
     try:
         if "text/html" in resp.headers.get("Content-Type", "") and not resp.is_streamed:
-            body = resp.get_data(as_text=True)
-            resp.set_data(_PAT.sub("", body))
+            resp.set_data(_PAT.sub("", resp.get_data(as_text=True)))
     except: pass
     return resp
