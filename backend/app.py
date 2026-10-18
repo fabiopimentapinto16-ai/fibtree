@@ -161,12 +161,4 @@ try:
     app.register_blueprint(bp_detector)
 except Exception as _e: print('detectorismo:', _e)
 
-try:
-    from anti_bitola import bp_anti
-    app.register_blueprint(bp_anti)
-except Exception as _e: print('anti_bitola:', _e)
 
-try:
-    from requerimentos_ext import bp_requerimentos
-    app.register_blueprint(bp_requerimentos)
-except Exception as _e: print('requerimentos:', _e)
