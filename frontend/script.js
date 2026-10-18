@@ -225,6 +225,7 @@ function exportarCSV() { let h = JSON.parse(localStorage.getItem('historico') ||
 function ativarModoAmostra() { modoAmostra = true; alert('Clique no mapa para marcar a amostra.'); }
 function ativarGPS() { navigator.geolocation.getCurrentPosition(p => { document.getElementById('lat').value = p.coords.latitude.toFixed(6); document.getElementById('lng').value = p.coords.longitude.toFixed(6); map.setView([p.coords.latitude, p.coords.longitude], 13); }); }
 
+
 async function abrir3D() {
     document.getElementById('modal3D').style.display = 'flex';
     let container = document.getElementById('canvas3d');
@@ -236,7 +237,8 @@ async function abrir3D() {
             let dadosSim = await res.json();
             camadas = dadosSim.camadas || [];
         }
-    } catch(e) { console.warn(e); }
+    } catch(e) { console.warn("Erro no backend 3D, usando fallback", e); }
+    
     if (camadas.length === 0) {
         camadas = [
             {profundidade_cm: 0, espessura_cm: 30, tipo: "Solo Orgânico", cor: "#8B7355"},
@@ -245,6 +247,7 @@ async function abrir3D() {
             {profundidade_cm: 120, espessura_cm: 80, tipo: "Rocha Base", cor: "#696969"}
         ];
     }
+    
     setTimeout(() => {
         container.innerHTML = '';
         let largura = container.clientWidth || 300, altura = container.clientHeight || 300;
@@ -270,6 +273,7 @@ async function abrir3D() {
         animar();
     }, 150);
 }
+
 
 let cprmLayer = null;
 function toggleCPRM() {
